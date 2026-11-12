@@ -4,7 +4,8 @@ import { z } from "zod";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listSocialAccounts } from "@/lib/social-accounts";
-import { savePost, deletePost } from "@/lib/posts";
+import { savePost, deletePost, reschedulePost, getPost } from "@/lib/posts";
+import { addInternalComment, setCommentResolved } from "@/lib/comments";
 import { createMedia } from "@/lib/media";
 import {
   createPresignedUpload,
@@ -66,6 +67,7 @@ const SavePostSchema = z.object({
   postId: z.string().optional(),
   masterText: z.string().nullable(),
   masterMediaIds: z.array(z.string()),
+  scheduledAt: z.string().nullable().optional(), // "YYYY-MM-DD"
   channels: z.array(
     z.object({
       socialAccountId: z.string(),
@@ -86,7 +88,11 @@ export async function savePostAction(slug: string, input: z.infer<typeof SavePos
   const validAccountIds = new Set((await listSocialAccounts(workspace.id)).map((a) => a.id));
   const channels = data.channels.filter((c) => validAccountIds.has(c.socialAccountId));
 
-  const post = await savePost(workspace.id, user.id, { ...data, channels });
+  const post = await savePost(workspace.id, user.id, {
+    ...data,
+    channels,
+    scheduledAt: data.scheduledAt === undefined ? undefined : data.scheduledAt ? new Date(`${data.scheduledAt}T09:00:00`) : null,
+  });
   return { id: post.id };
 }
 
@@ -97,4 +103,41 @@ export async function deletePostAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await deletePost(workspace.id, postId);
+}
+
+// `isoDate` is a plain "YYYY-MM-DD" (from a date-only picker or a calendar
+// day cell), interpreted in the server's local time; `null` unschedules it.
+// Scheduling here only sets the target date — it does not move the post
+// through the approval workflow (that lands in Phase 4) or queue it for
+// publishing (Phase 5).
+export async function reschedulePostAction(slug: string, postId: string, isoDate: string | null) {
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  const date = isoDate ? new Date(`${isoDate}T09:00:00`) : null;
+  await reschedulePost(workspace.id, postId, date);
+}
+
+export async function addCommentAction(slug: string, postId: string, text: string) {
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Kommentar darf nicht leer sein.");
+
+  // Defense in depth: the post must actually belong to this workspace.
+  await getPost(workspace.id, postId);
+
+  return addInternalComment(postId, user.id, trimmed);
+}
+
+export async function toggleCommentResolvedAction(
+  slug: string,
+  postId: string,
+  commentId: string,
+  resolved: boolean,
+) {
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  await getPost(workspace.id, postId);
+
+  await setCommentResolved(postId, commentId, resolved);
 }

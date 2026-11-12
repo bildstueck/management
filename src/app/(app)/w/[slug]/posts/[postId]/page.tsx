@@ -3,6 +3,7 @@ import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listSocialAccounts } from "@/lib/social-accounts";
 import { listMedia } from "@/lib/media";
 import { getPost } from "@/lib/posts";
+import { toDateKey } from "@/lib/calendar-dates";
 import { PostComposer } from "@/components/post-composer";
 
 export default async function EditPostPage({
@@ -30,6 +31,7 @@ export default async function EditPostPage({
           id: post.id,
           masterText: post.masterText ?? "",
           masterMediaIds: post.masterMediaIds,
+          scheduledAt: post.scheduledAt ? toDateKey(post.scheduledAt) : null,
           channels: post.channelVariants.map((variant) => ({
             socialAccountId: variant.socialAccountId,
             text: variant.text,

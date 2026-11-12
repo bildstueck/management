@@ -34,6 +34,7 @@ export type InitialPost = {
   id: string;
   masterText: string;
   masterMediaIds: string[];
+  scheduledAt: string | null; // "YYYY-MM-DD"
   channels: { socialAccountId: string; text: string | null; mediaIds: string[] }[];
 };
 
@@ -73,6 +74,7 @@ export function PostComposer({
   const [masterMediaIds, setMasterMediaIds] = useState<string[]>(
     initialPost?.masterMediaIds ?? [],
   );
+  const [scheduledAt, setScheduledAt] = useState(initialPost?.scheduledAt ?? "");
   const [mediaLibrary, setMediaLibrary] = useState<MediaOption[]>(initialMedia);
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(
     initialPost?.channels.map((c) => c.socialAccountId) ?? [],
@@ -181,6 +183,7 @@ export function PostComposer({
           postId: postId ?? undefined,
           masterText: masterText || null,
           masterMediaIds,
+          scheduledAt: scheduledAt || null,
           channels,
         });
         if (!postId) {
@@ -351,9 +354,27 @@ export function PostComposer({
           </CardContent>
         </Card>
 
-        <Button onClick={handleSave} disabled={isSaving || selectedAccountIds.length === 0}>
-          {isSaving ? "Wird gespeichert…" : "Entwurf speichern"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="scheduledAt" className="text-xs text-muted-foreground">
+              Geplantes Datum (optional, siehe Kalender-Ansicht)
+            </label>
+            <input
+              id="scheduledAt"
+              type="date"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs"
+            />
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || selectedAccountIds.length === 0}
+            className="mt-5"
+          >
+            {isSaving ? "Wird gespeichert…" : "Entwurf speichern"}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">

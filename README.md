@@ -2,7 +2,7 @@
 
 Self-hosted social media planning, client-approval and auto-publishing platform (Facebook, Instagram, LinkedIn) — a Planable-style workflow you run yourself.
 
-See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)** and **Phase 2 (post composer, media upload, per-channel preview)**.
+See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**, **Phase 2 (post composer, media upload, per-channel preview)** and **Phase 3 (Feed/Calendar/Instagram-Grid views, internal comments)**.
 
 ## Tech stack
 
@@ -121,7 +121,17 @@ This creates the bucket (if missing) and makes it public-read + CORS-enabled for
 
 Only JPEG/PNG images and MP4/MOV videos are accepted at upload time (8MB / 1GB sanity caps); exact per-platform limits (aspect ratio, duration, carousel size) are enforced later, when actually publishing.
 
-Posts only reach `DRAFT` status in this phase — the Feed/Calendar/Grid views, the approval workflow and scheduled/automatic publishing are Phases 3–5.
+Posts only reach `DRAFT` status in this phase — the approval workflow and scheduled/automatic publishing are Phases 4–5.
+
+## Views & internal comments (Phase 3)
+
+`/w/<slug>/posts` now has three views, switchable via the tabs at the top:
+
+- **Feed** (default) — chronological list of all posts, each with an inline, internal comment thread (add a comment, mark it done/reopen). These are team-internal comments (`Comment.authorType = INTERNAL`); client-facing comments via a magic link are Phase 4.
+- **Kalender** — a month grid you can navigate (`?month=YYYY-MM`). Posts with no `scheduledAt` sit in a tray above the grid; drag any post chip onto a day (or back into the tray) to set/clear its scheduled date. There's no week view yet — month view covers the Phase 3 scope; a week view would reuse the same `src/lib/calendar-dates.ts` helpers if added later.
+- **Instagram Grid** — a 3-column preview of how a connected Instagram account's grid would look, ordered by `scheduledAt` (unscheduled posts sort to the end, since they have no defined position yet). If a workspace has more than one connected Instagram account, switch between them with the pills above the grid.
+
+Setting a date (from the calendar or the composer's own date field) only sets `Post.scheduledAt` — it does **not** change `status` or queue anything for publishing. Those transitions (Draft → Pending Approval → Approved → Scheduled → Published) land with the approval workflow (Phase 4) and the publish worker (Phase 5).
 
 ## Project structure
 
@@ -135,7 +145,9 @@ src/lib/workspaces.ts         Workspace CRUD + membership checks
 src/lib/members.ts            Add/remove/change-role for workspace members
 src/lib/social-accounts.ts    Connected-account storage (encrypted tokens)
 src/lib/oauth/                Meta + LinkedIn OAuth clients, signed OAuth "state" helper
-src/lib/posts.ts              Post + per-channel variant CRUD
+src/lib/posts.ts              Post + per-channel variant CRUD, calendar/grid queries
+src/lib/comments.ts            Internal post comments
+src/lib/calendar-dates.ts      Month-grid date math shared by server + client
 src/lib/media.ts               Media record CRUD
 src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
 src/lib/              Prisma client, Redis, BullMQ queue, S3 client, token encryption
@@ -143,10 +155,12 @@ src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before e
 src/scripts/init-bucket.ts    One-time MinIO/S3 bucket + policy + CORS setup (npm run s3:init)
 src/app/login                 Public login page
 src/app/(app)/dashboard       Workspace list + create
-src/app/(app)/w/[slug]        Workspace shell: overview, posts, accounts, members
+src/app/(app)/w/[slug]        Workspace shell: overview, posts (Feed/Calendar/Grid), accounts, members
 src/app/api/connect/          Meta/LinkedIn "connect account" OAuth flow (not NextAuth login)
 src/app/review/[token]        Public magic-link review route (stub, built out in Phase 4)
 src/components/post-composer.tsx   Master text + per-channel overrides + media picker
+src/components/post-calendar.tsx   Drag-and-drop month calendar
+src/components/post-comments.tsx   Inline internal comment thread
 src/components/previews/      Facebook/Instagram/LinkedIn mockup preview cards
 docker-compose.yml            Local Postgres + Redis + MinIO
 ```
