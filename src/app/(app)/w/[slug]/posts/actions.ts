@@ -11,6 +11,8 @@ import {
   getPost,
   submitForApproval,
   revertToDraft,
+  scheduleForPublish,
+  cancelSchedule,
 } from "@/lib/posts";
 import { addInternalComment, setCommentResolved } from "@/lib/comments";
 import { createMedia } from "@/lib/media";
@@ -19,6 +21,8 @@ import {
   mediaTypeForContentType,
   maxBytesForContentType,
 } from "@/lib/s3-upload";
+import { publishQueue } from "@/lib/queue";
+import { createPublishJob, cancelQueuedPublishJobs } from "@/lib/publish-jobs";
 
 export async function requestMediaUploadAction(
   slug: string,
@@ -165,4 +169,62 @@ export async function revertToDraftAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await revertToDraft(workspace.id, postId, user.id);
+}
+
+async function enqueuePublishJob(postId: string, delayMs: number) {
+  const jobId = `publish-${postId}`;
+  await publishQueue.add(
+    "publish",
+    { postId },
+    {
+      jobId,
+      delay: Math.max(delayMs, 0),
+      attempts: 3,
+      backoff: { type: "exponential", delay: 60_000 },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+  await createPublishJob(postId, jobId);
+}
+
+// Queues an APPROVED (or previously FAILED) post for publishing at its
+// scheduledAt — or right away if that's in the past or unset.
+export async function schedulePostAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const postId = formData.get("postId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  const post = await getPost(workspace.id, postId);
+
+  await scheduleForPublish(workspace.id, postId, user.id);
+  const delay = post.scheduledAt ? post.scheduledAt.getTime() - Date.now() : 0;
+  await enqueuePublishJob(postId, delay);
+}
+
+// Same as schedulePostAction, but always publishes immediately regardless
+// of any scheduledAt the post may have.
+export async function publishNowAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const postId = formData.get("postId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+
+  await scheduleForPublish(workspace.id, postId, user.id);
+  await enqueuePublishJob(postId, 0);
+}
+
+export async function cancelScheduleAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const postId = formData.get("postId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+
+  const job = await publishQueue.getJob(`publish-${postId}`);
+  if (job) await job.remove();
+  await cancelQueuedPublishJobs(postId);
+  await cancelSchedule(workspace.id, postId, user.id);
 }

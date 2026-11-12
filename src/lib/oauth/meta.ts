@@ -1,11 +1,8 @@
 import "server-only";
+import { GRAPH_VERSION, GRAPH_BASE } from "@/lib/meta-graph";
 
 // Meta Graph API — Facebook Login for Business flow (Pages + their linked
-// Instagram Business/Creator accounts). Graph API version per Meta's
-// changelog (https://developers.facebook.com/docs/graph-api/changelog) as of
-// this writing; bump GRAPH_VERSION when Meta deprecates it.
-const GRAPH_VERSION = "v26.0";
-const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+// Instagram Business/Creator accounts).
 
 export const META_SCOPES = [
   "pages_show_list",

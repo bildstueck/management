@@ -120,6 +120,7 @@ model PostChannelVariant {
   socialAccountId String
   text            String?
   mediaIds        String[] // ordered list of Media.id for this channel's post
+  publishedExternalId String? // platform's post ID once published; lets a retry skip channels that already succeeded
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

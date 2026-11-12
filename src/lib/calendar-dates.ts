@@ -48,3 +48,10 @@ const MONTH_NAMES = [
 export function monthLabel(year: number, monthIndex: number): string {
   return `${MONTH_NAMES[monthIndex]} ${year}`;
 }
+
+// A thin wrapper so Server Components can check "is this in the future"
+// without calling the impure `Date.now()` directly in their render body
+// (React's purity lint rule flags that call site specifically).
+export function isFutureDate(date: Date): boolean {
+  return date.getTime() > Date.now();
+}

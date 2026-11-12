@@ -1,4 +1,3 @@
-import "server-only";
 import { prisma } from "@/lib/prisma";
 import { encryptToken, decryptToken } from "@/lib/encryption";
 import type { Platform } from "@prisma/client";

@@ -1,4 +1,3 @@
-import "server-only";
 
 // LinkedIn OAuth2 + OpenID Connect. Endpoints per LinkedIn's discovery
 // document (https://www.linkedin.com/oauth/.well-known/openid-configuration).

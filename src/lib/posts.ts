@@ -1,4 +1,3 @@
-import "server-only";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { PostStatus } from "@prisma/client";
@@ -14,6 +13,10 @@ const HISTORY_INCLUDE = {
   },
 } as const;
 
+const LATEST_PUBLISH_JOB_INCLUDE = {
+  publishJobs: { orderBy: { createdAt: "desc" as const }, take: 1 },
+} as const;
+
 export function listPosts(workspaceId: string) {
   return prisma.post.findMany({
     where: { workspaceId },
@@ -22,6 +25,7 @@ export function listPosts(workspaceId: string) {
       channelVariants: { include: { socialAccount: true } },
       ...COMMENTS_INCLUDE,
       ...HISTORY_INCLUDE,
+      ...LATEST_PUBLISH_JOB_INCLUDE,
     },
   });
 }
@@ -230,6 +234,73 @@ export function revertToDraft(workspaceId: string, postId: string, userId: strin
 // Client (via share link) or internal team: approve a post under review.
 export function approvePost(workspaceId: string, postId: string, actor: Actor) {
   return transitionStatus(workspaceId, postId, ["PENDING_APPROVAL"], "APPROVED", actor);
+}
+
+// Internal team: queue an approved (or previously failed) post for
+// publishing — immediately, or at its scheduledAt. The worker is what
+// actually waits, via a delayed BullMQ job; this just flips status + logs
+// the transition. Allowing FAILED → SCHEDULED directly is the "retry" path.
+export function scheduleForPublish(workspaceId: string, postId: string, userId: string) {
+  return transitionStatus(workspaceId, postId, ["APPROVED", "FAILED"], "SCHEDULED", { userId });
+}
+
+// Internal team: pull a queued post back before it publishes.
+export function cancelSchedule(workspaceId: string, postId: string, userId: string) {
+  return transitionStatus(workspaceId, postId, ["SCHEDULED"], "APPROVED", { userId });
+}
+
+// Worker-only: records one channel's successful publish so a retry (after a
+// different channel failed) can skip it instead of posting twice.
+export function markChannelPublished(variantId: string, externalPostId: string) {
+  return prisma.postChannelVariant.update({
+    where: { id: variantId },
+    data: { publishedExternalId: externalPostId },
+  });
+}
+
+// Worker-only: called after every channel succeeded. Not scoped to a
+// workspace — the worker already loaded the post itself, there's no
+// user-supplied workspaceId to check against here.
+export async function markPostPublished(postId: string, channelCount: number) {
+  await prisma.$transaction(async (tx) => {
+    const post = await tx.post.update({
+      where: { id: postId },
+      data: { status: "PUBLISHED", publishedAt: new Date() },
+    });
+    await tx.approvalEvent.create({
+      data: {
+        postId: post.id,
+        action: "STATUS_CHANGED",
+        fromStatus: "SCHEDULED",
+        toStatus: "PUBLISHED",
+        note: `Veröffentlicht (${channelCount} Kanal/Kanäle).`,
+      },
+    });
+  });
+}
+
+export async function markPostFailed(postId: string, errorSummary: string) {
+  await prisma.$transaction(async (tx) => {
+    const post = await tx.post.update({ where: { id: postId }, data: { status: "FAILED" } });
+    await tx.approvalEvent.create({
+      data: {
+        postId: post.id,
+        action: "STATUS_CHANGED",
+        fromStatus: "SCHEDULED",
+        toStatus: "FAILED",
+        note: errorSummary,
+      },
+    });
+  });
+}
+
+// Everything the publish worker needs for one post: channels with their
+// SocialAccount (for tokens) and the post's own master media as a fallback.
+export function getPostForPublishing(postId: string) {
+  return prisma.post.findUnique({
+    where: { id: postId },
+    include: { channelVariants: { include: { socialAccount: true } } },
+  });
 }
 
 // Client-facing text edit via a share link with canEdit. Logged as a simple

@@ -2,7 +2,7 @@
 
 Self-hosted social media planning, client-approval and auto-publishing platform (Facebook, Instagram, LinkedIn) — a Planable-style workflow you run yourself.
 
-See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**, **Phase 2 (post composer, media upload, per-channel preview)**, **Phase 3 (Feed/Calendar/Instagram-Grid views, internal comments)** and **Phase 4 (magic-link client approval)**.
+See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**, **Phase 2 (post composer, media upload, per-channel preview)**, **Phase 3 (Feed/Calendar/Instagram-Grid views, internal comments)**, **Phase 4 (magic-link client approval)** and **Phase 5 (scheduler + automatic publishing)**. That's the full original roadmap — Phase 6 (hardening/deployment polish) is the one phase left.
 
 ## Tech stack
 
@@ -76,6 +76,7 @@ Then, as a workspace Owner, add them to a workspace from `/w/<slug>/members` by 
 | `npm run db:seed` | Run `prisma/seed.ts` |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run worker:tokens` | Background job that silently refreshes LinkedIn tokens before they expire (run alongside `npm run dev`) |
+| `npm run worker:publish` | Background job that actually publishes scheduled posts to Facebook/Instagram/LinkedIn (run alongside `npm run dev`) |
 | `npm run s3:init` | One-time: creates the media bucket and makes it public-read + CORS-enabled (needed before uploading media) |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
 
@@ -147,6 +148,28 @@ The first time a visitor comments, approves, or edits, they're asked for a displ
 
 Every status change and text edit is recorded on `ApprovalEvent` and shown as a small "Verlauf" (history) list on each post, both internally and on the review page.
 
+## Scheduler & automatic publishing (Phase 5)
+
+Once a post is `APPROVED` (or previously `FAILED`), the Feed shows:
+- **Terminieren** — only when the post has a future `scheduledAt` (set in the composer or the calendar) — queues it on a delayed BullMQ job that fires at that time.
+- **Jetzt veröffentlichen** / **Erneut versuchen** — publishes immediately, bypassing `scheduledAt`.
+- **Planung abbrechen** (while `SCHEDULED`) — cancels the queued job and drops back to `APPROVED`.
+
+Run the worker that actually does the publishing alongside `npm run dev`:
+
+```bash
+npm run worker:publish
+```
+
+Each channel is published by `src/lib/publishers/{facebook,instagram,linkedin}.ts`:
+- **Facebook** — a plain `/feed` post for text-only; `/photos` or `/videos` for a single image/video; multiple *images* are uploaded unpublished first and attached to one `/feed` post (Facebook has no Instagram-style carousel container, and a video can't be mixed into that).
+- **Instagram** — the Graph API container flow: create a container per image/video (`is_carousel_item` for 2–10 items), poll `status_code` until a video container is `FINISHED`, then `media_publish`.
+- **LinkedIn** — the current `/rest/posts` API (not the deprecated `/v2/ugcPosts`), with a single image/video uploaded via the Images/Videos API first (video uses LinkedIn's chunked multipart upload). **Multiple media per LinkedIn post isn't implemented** (LinkedIn's organic MultiImage API) — that call fails with a clear error rather than guessing. The `Linkedin-Version` header is a hardcoded `YYYYMM` in `src/lib/publishers/linkedin.ts` — bump it periodically per LinkedIn's versioning policy.
+
+**Retries & partial failure:** a failed attempt retries up to 3 times (exponential backoff) via BullMQ's own retry, not a custom loop. Each `PostChannelVariant` records its own `publishedExternalId` the moment *that* channel succeeds, so a retry (triggered by a different channel failing) skips channels already posted instead of double-posting. If every attempt still has failures, the post becomes `FAILED` and the Feed shows the combined error message (from the latest `PublishJob`); there's no automatic cross-channel rollback — a post can legitimately end up published on some channels and failed on others, and that's shown rather than hidden.
+
+**A note for anyone adding worker-shared code:** `src/workers/*.ts` run as plain `tsx` processes, never through Next's bundler. Next aliases the `server-only` package to a no-op internally, but the real npm package (needed so plain Node can resolve the import at all) unconditionally throws — so none of the files a worker imports (directly or transitively) can have `import "server-only"` at the top. That's why `src/lib/posts.ts`, `media.ts`, `social-accounts.ts`, `publish-jobs.ts` and `src/lib/publishers/*` don't have it, even though they're server-only in spirit; nothing in this codebase imports them from a Client Component anyway (Client Components always go through a `"use server"` action file instead).
+
 ## Project structure
 
 ```
@@ -166,8 +189,11 @@ src/lib/share-link-session.ts  Password-unlock + reviewer-name cookies for /revi
 src/lib/calendar-dates.ts      Month-grid date math shared by server + client
 src/lib/media.ts               Media record CRUD
 src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
+src/lib/publish-jobs.ts        PublishJob status tracking
+src/lib/publishers/           Facebook/Instagram/LinkedIn publishers + shared Graph API client
 src/lib/              Prisma client, Redis, BullMQ queue, S3 client, token encryption
 src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before expiry
+src/workers/publish.ts        Background job: publishes SCHEDULED posts (npm run worker:publish)
 src/scripts/init-bucket.ts    One-time MinIO/S3 bucket + policy + CORS setup (npm run s3:init)
 src/app/login                 Public login page
 src/app/(app)/dashboard       Workspace list + create
