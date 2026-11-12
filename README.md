@@ -170,6 +170,67 @@ Each channel is published by `src/lib/publishers/{facebook,instagram,linkedin}.t
 
 **A note for anyone adding worker-shared code:** `src/workers/*.ts` run as plain `tsx` processes, never through Next's bundler. Next aliases the `server-only` package to a no-op internally, but the real npm package (needed so plain Node can resolve the import at all) unconditionally throws — so none of the files a worker imports (directly or transitively) can have `import "server-only"` at the top. That's why `src/lib/posts.ts`, `media.ts`, `social-accounts.ts`, `publish-jobs.ts` and `src/lib/publishers/*` don't have it, even though they're server-only in spirit; nothing in this codebase imports them from a Client Component anyway (Client Components always go through a `"use server"` action file instead).
 
+## Notifications & tests (Phase 6)
+
+Workspace members get an email (via `src/lib/email.ts`, any SMTP provider) when a client comments on or approves a post through a share link — internal activity (team comments, drafting) stays silent, since the team already knows what it did. Set `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` in `.env` to enable it; leave them unset and it's skipped (logged, nothing else breaks).
+
+```bash
+npm run test       # vitest, once
+npm run test:watch # vitest, watch mode
+```
+
+Covers the pure logic (slug generation, calendar/month-grid date math, the token-encryption round-trip) and all three publishers end-to-end against a mocked `fetch` — single media, multi-image/carousel, LinkedIn's chunked video upload, and error surfacing from the Graph/LinkedIn APIs. There's no integration test against a real database — that needs Docker, see below.
+
+## Deployment (Phase 6)
+
+This ships as two kinds of container, both built from the one `Dockerfile`:
+
+- **`web`** — the Next.js server, as Next's minimal [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output). Small, no `node_modules` install step at runtime.
+- **`worker`** — full `node_modules` + source, used for the two background workers (`worker-publish`, `worker-tokens`) and one-off `prisma migrate deploy` / seed runs. Prisma 7's `@prisma/adapter-pg` driver adapter does query building in JS and talks to Postgres through the `pg` driver directly — there's no native query-engine binary to fetch, so a plain Alpine base image works with no OpenSSL/glibc workarounds.
+
+`docker-compose.prod.yml` wires up Postgres, Redis, both workers, the web server, a one-off `migrate` service, and [Caddy](https://caddyserver.com/) in front for automatic HTTPS. It deliberately has **no MinIO** — production media storage is Cloudflare R2 (or any S3-compatible host), configured entirely through environment variables.
+
+### 1. Point a domain at the server
+
+Create an A record for your domain pointing at the server's IP, and make sure ports 80 and 443 are open — Caddy needs both to obtain and renew a Let's Encrypt certificate automatically.
+
+### 2. Set up Cloudflare R2 for media
+
+`npm run s3:init` (the policy/CORS script) is MinIO/AWS-S3-flavored and **doesn't work against R2** — R2 doesn't implement the S3 bucket-policy API the way MinIO/AWS do. Instead:
+
+1. Create an R2 bucket in the Cloudflare dashboard.
+2. Under the bucket's **Settings → Custom Domains**, connect a subdomain (e.g. `media.yourdomain.com`) — this is what makes objects publicly readable over HTTPS, required for Meta/Instagram to fetch media at publish time. The `r2.dev` development URL works too, but it's rate-limited and not meant for production.
+3. Under **Settings → CORS Policy**, allow `GET`/`PUT` from `https://yourdomain.com` (needed for the browser's direct upload in the composer).
+4. Create an R2 API token (Account → R2 → Manage API Tokens) for `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`.
+5. Set `S3_ENDPOINT="https://<account-id>.r2.cloudflarestorage.com"`, `S3_BUCKET` to the bucket name, and `S3_PUBLIC_BASE_URL="https://media.yourdomain.com"` (your custom domain from step 2).
+
+### 3. Write `.env.production`
+
+Same variables as `.env.example`, plus:
+
+```bash
+POSTGRES_USER="social_planner"
+POSTGRES_PASSWORD="<generate one>"
+POSTGRES_DB="social_planner"
+DATABASE_URL="postgresql://social_planner:<same password>@postgres:5432/social_planner"
+REDIS_URL="redis://redis:6379"
+AUTH_URL="https://yourdomain.com"
+DOMAIN="yourdomain.com" # read by the Caddyfile
+```
+
+`DATABASE_URL`/`REDIS_URL` use the Compose service names (`postgres`, `redis`) as hostnames, not `localhost`. Update the Meta and LinkedIn app redirect URIs to `https://yourdomain.com/api/connect/{meta,linkedin}/callback` (see the setup steps above) — they must match `AUTH_URL` exactly.
+
+### 4. Build, migrate, launch
+
+```bash
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm migrate
+docker compose -f docker-compose.prod.yml run --rm migrate npx prisma db seed   # first deploy only
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Re-run the `migrate` command (not `up -d`, which only starts the long-running services) after every deploy that changes `prisma/schema.prisma`.
+
 ## Project structure
 
 ```
@@ -191,6 +252,8 @@ src/lib/media.ts               Media record CRUD
 src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
 src/lib/publish-jobs.ts        PublishJob status tracking
 src/lib/publishers/           Facebook/Instagram/LinkedIn publishers + shared Graph API client
+src/lib/email.ts               SMTP wrapper (nodemailer)
+src/lib/notifications.ts       Email on client comment/approval
 src/lib/              Prisma client, Redis, BullMQ queue, S3 client, token encryption
 src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before expiry
 src/workers/publish.ts        Background job: publishes SCHEDULED posts (npm run worker:publish)
@@ -205,5 +268,9 @@ src/components/post-calendar.tsx   Drag-and-drop month calendar
 src/components/post-comments.tsx   Inline internal comment thread (Feed)
 src/components/review/             Password gate, review comments, review post card (public page)
 src/components/previews/      Facebook/Instagram/LinkedIn mockup preview cards (shared by composer + review)
+vitest.config.mts             Test runner config (path alias, Node environment)
 docker-compose.yml            Local Postgres + Redis + MinIO
+Dockerfile                    Multi-stage build: `web` (standalone) + `worker` (full deps) targets
+docker-compose.prod.yml       Production stack: Postgres, Redis, web, both workers, Caddy (HTTPS)
+Caddyfile                      Reverse proxy + automatic HTTPS for docker-compose.prod.yml
 ```
