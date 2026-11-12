@@ -2,8 +2,9 @@
 
 import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links";
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
-import { approvePost, updatePostTextByReviewer, postBelongsToWorkspace } from "@/lib/posts";
+import { approvePost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
+import { notifyClientComment, notifyClientApproval } from "@/lib/notifications";
 
 // Public, token-authenticated actions for the magic-link review page
 // (src/app/review/[token]/page.tsx). There is no NextAuth session here —
@@ -19,9 +20,9 @@ async function requireLink(token: string) {
 }
 
 async function requirePostInWorkspace(workspaceId: string, postId: string) {
-  if (!(await postBelongsToWorkspace(workspaceId, postId))) {
-    throw new ShareLinkError("Beitrag nicht gefunden.");
-  }
+  const post = await getPostLite(workspaceId, postId);
+  if (!post) throw new ShareLinkError("Beitrag nicht gefunden.");
+  return post;
 }
 
 export type UnlockState = { error?: string } | undefined;
@@ -47,14 +48,16 @@ export async function addReviewCommentAction(
 ) {
   const link = await requireLink(token);
   if (!link.canComment) throw new ShareLinkError("Kommentare sind für diesen Link nicht erlaubt.");
-  await requirePostInWorkspace(link.workspaceId, postId);
+  const post = await requirePostInWorkspace(link.workspaceId, postId);
 
   const trimmedText = text.trim();
   if (!trimmedText) throw new ShareLinkError("Kommentar darf nicht leer sein.");
   const authorName = name.trim() || "Kunde";
 
   await setReviewerName(authorName);
-  return addExternalComment(postId, authorName, trimmedText);
+  const comment = await addExternalComment(postId, authorName, trimmedText);
+  await notifyClientComment(link.workspace, postId, post.masterText ?? "", authorName, trimmedText);
+  return comment;
 }
 
 export async function toggleReviewCommentResolvedAction(
@@ -72,11 +75,13 @@ export async function toggleReviewCommentResolvedAction(
 export async function approveReviewPostAction(token: string, postId: string, name: string) {
   const link = await requireLink(token);
   if (!link.canApprove) throw new ShareLinkError("Freigeben ist für diesen Link nicht erlaubt.");
-  await requirePostInWorkspace(link.workspaceId, postId);
+  const post = await requirePostInWorkspace(link.workspaceId, postId);
 
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
-  return approvePost(link.workspaceId, postId, { name: authorName });
+  const result = await approvePost(link.workspaceId, postId, { name: authorName });
+  await notifyClientApproval(link.workspace, postId, post.masterText ?? "", authorName);
+  return result;
 }
 
 export async function editReviewPostTextAction(

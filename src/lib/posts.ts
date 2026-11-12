@@ -178,6 +178,17 @@ export async function postBelongsToWorkspace(workspaceId: string, postId: string
   return post !== null;
 }
 
+// Lightweight lookup for places that just need to confirm a post belongs to
+// a workspace and want its text for a notification — avoids the heavier
+// getPost() (which also pulls channel variants and 404s via next/navigation,
+// not appropriate for a public share-link action).
+export function getPostLite(workspaceId: string, postId: string) {
+  return prisma.post.findFirst({
+    where: { id: postId, workspaceId },
+    select: { id: true, masterText: true },
+  });
+}
+
 export class PostActionError extends Error {}
 
 type Actor = { userId?: string; name?: string };
