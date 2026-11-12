@@ -1,6 +1,18 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import type { PostStatus } from "@prisma/client";
+
+const COMMENTS_INCLUDE = {
+  comments: { include: { authorUser: { select: { id: true, name: true, email: true } } } },
+} as const;
+
+const HISTORY_INCLUDE = {
+  approvalEvents: {
+    include: { actorUser: { select: { id: true, name: true, email: true } } },
+    orderBy: { createdAt: "asc" as const },
+  },
+} as const;
 
 export function listPosts(workspaceId: string) {
   return prisma.post.findMany({
@@ -8,7 +20,24 @@ export function listPosts(workspaceId: string) {
     orderBy: { updatedAt: "desc" },
     include: {
       channelVariants: { include: { socialAccount: true } },
-      comments: { include: { authorUser: { select: { id: true, name: true, email: true } } } },
+      ...COMMENTS_INCLUDE,
+      ...HISTORY_INCLUDE,
+    },
+  });
+}
+
+// Posts a client-facing share link may show: anything already submitted for
+// review. Raw DRAFTs stay internal-only until a team member submits them.
+const REVIEWABLE_STATUSES: PostStatus[] = ["PENDING_APPROVAL", "APPROVED", "SCHEDULED", "PUBLISHED"];
+
+export function listReviewablePosts(workspaceId: string) {
+  return prisma.post.findMany({
+    where: { workspaceId, status: { in: REVIEWABLE_STATUSES } },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      channelVariants: { include: { socialAccount: true } },
+      ...COMMENTS_INCLUDE,
+      ...HISTORY_INCLUDE,
     },
   });
 }
@@ -138,4 +167,93 @@ export async function savePost(workspaceId: string, userId: string, input: SaveP
 
 export async function deletePost(workspaceId: string, postId: string) {
   await prisma.post.deleteMany({ where: { id: postId, workspaceId } });
+}
+
+export async function postBelongsToWorkspace(workspaceId: string, postId: string): Promise<boolean> {
+  const post = await prisma.post.findFirst({ where: { id: postId, workspaceId }, select: { id: true } });
+  return post !== null;
+}
+
+export class PostActionError extends Error {}
+
+type Actor = { userId?: string; name?: string };
+
+async function transitionStatus(
+  workspaceId: string,
+  postId: string,
+  from: PostStatus[],
+  to: PostStatus,
+  actor: Actor,
+  note?: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const post = await tx.post.findFirst({ where: { id: postId, workspaceId } });
+    if (!post) notFound();
+    if (!from.includes(post.status)) {
+      throw new PostActionError(
+        `Beitrag ist im Status "${post.status}" — Übergang nach "${to}" nicht möglich.`,
+      );
+    }
+
+    const updated = await tx.post.update({ where: { id: post.id }, data: { status: to } });
+    await tx.approvalEvent.create({
+      data: {
+        postId: post.id,
+        action: "STATUS_CHANGED",
+        fromStatus: post.status,
+        toStatus: to,
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        note,
+      },
+    });
+    return updated;
+  });
+}
+
+// Internal team: send a draft to the client for review.
+export function submitForApproval(workspaceId: string, postId: string, userId: string) {
+  return transitionStatus(workspaceId, postId, ["DRAFT"], "PENDING_APPROVAL", { userId });
+}
+
+// Internal team: pull a post back out of review/approval for more edits.
+export function revertToDraft(workspaceId: string, postId: string, userId: string) {
+  return transitionStatus(
+    workspaceId,
+    postId,
+    ["PENDING_APPROVAL", "APPROVED"],
+    "DRAFT",
+    { userId },
+  );
+}
+
+// Client (via share link) or internal team: approve a post under review.
+export function approvePost(workspaceId: string, postId: string, actor: Actor) {
+  return transitionStatus(workspaceId, postId, ["PENDING_APPROVAL"], "APPROVED", actor);
+}
+
+// Client-facing text edit via a share link with canEdit. Logged as a simple
+// version history entry (old → new) on ApprovalEvent rather than a separate
+// versions table — see ApprovalEvent.action = EDITED.
+export async function updatePostTextByReviewer(
+  workspaceId: string,
+  postId: string,
+  newText: string,
+  actorName: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const post = await tx.post.findFirst({ where: { id: postId, workspaceId } });
+    if (!post) notFound();
+
+    const oldText = post.masterText ?? "";
+    await tx.post.update({ where: { id: post.id }, data: { masterText: newText } });
+    await tx.approvalEvent.create({
+      data: {
+        postId: post.id,
+        action: "EDITED",
+        actorName,
+        note: `Text geändert:\n− ${oldText}\n+ ${newText}`,
+      },
+    });
+  });
 }

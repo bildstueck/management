@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export function WorkspaceNav({ slug }: { slug: string }) {
+export function WorkspaceNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
   const pathname = usePathname();
   const base = `/w/${slug}`;
   const tabs = [
     { href: base, label: "Übersicht" },
     { href: `${base}/posts`, label: "Beiträge" },
+    ...(isOwner ? [{ href: `${base}/share`, label: "Freigabe" }] : []),
     { href: `${base}/accounts`, label: "Accounts" },
     { href: `${base}/members`, label: "Mitglieder" },
   ];

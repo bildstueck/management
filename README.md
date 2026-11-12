@@ -2,7 +2,7 @@
 
 Self-hosted social media planning, client-approval and auto-publishing platform (Facebook, Instagram, LinkedIn) — a Planable-style workflow you run yourself.
 
-See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**, **Phase 2 (post composer, media upload, per-channel preview)** and **Phase 3 (Feed/Calendar/Instagram-Grid views, internal comments)**.
+See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**, **Phase 2 (post composer, media upload, per-channel preview)**, **Phase 3 (Feed/Calendar/Instagram-Grid views, internal comments)** and **Phase 4 (magic-link client approval)**.
 
 ## Tech stack
 
@@ -133,6 +133,20 @@ Posts only reach `DRAFT` status in this phase — the approval workflow and sche
 
 Setting a date (from the calendar or the composer's own date field) only sets `Post.scheduledAt` — it does **not** change `status` or queue anything for publishing. Those transitions (Draft → Pending Approval → Approved → Scheduled → Published) land with the approval workflow (Phase 4) and the publish worker (Phase 5).
 
+## Client approval via magic link (Phase 4)
+
+**Internal side:** a Draft is invisible to clients. From the Feed, click **"Zur Freigabe einreichen"** to move it to `PENDING_APPROVAL` (and **"Zurück zu Entwurf"** to pull it back for more edits). A workspace **Owner** manages share links from `/w/<slug>/share` — create one with an optional password, an optional expiry (in days), and three independent toggles: allow commenting, allow approving, allow editing the text. Deleting a link immediately revokes it.
+
+**Client side:** the link (`/review/<token>`) needs no account. It shows every post with status `PENDING_APPROVAL` or later — never raw Drafts. Depending on the link's toggles, a visitor can:
+- view a live per-channel mockup (the same Facebook/Instagram/LinkedIn preview cards from the composer),
+- comment and mark comments done (stored as `Comment.authorType = EXTERNAL`, shown inline next to the team's own comments),
+- click **Freigeben** to approve a post (`PENDING_APPROVAL` → `APPROVED`),
+- edit the post's master text directly — logged as a plain-text version history entry (`ApprovalEvent.action = EDITED`, old → new) rather than a dedicated versions table; channels with their own customized text aren't touched by this.
+
+The first time a visitor comments, approves, or edits, they're asked for a display name; it's remembered in a cookie (`reviewer_name`, scoped to `/review`) so they're not asked again. A password-protected link sets a separate, signed, link-specific cookie once unlocked — there's no shared "logged in as client" session across links.
+
+Every status change and text edit is recorded on `ApprovalEvent` and shown as a small "Verlauf" (history) list on each post, both internally and on the review page.
+
 ## Project structure
 
 ```
@@ -145,8 +159,10 @@ src/lib/workspaces.ts         Workspace CRUD + membership checks
 src/lib/members.ts            Add/remove/change-role for workspace members
 src/lib/social-accounts.ts    Connected-account storage (encrypted tokens)
 src/lib/oauth/                Meta + LinkedIn OAuth clients, signed OAuth "state" helper
-src/lib/posts.ts              Post + per-channel variant CRUD, calendar/grid queries
-src/lib/comments.ts            Internal post comments
+src/lib/posts.ts              Post CRUD, status workflow, calendar/grid queries
+src/lib/comments.ts            Internal + external post comments
+src/lib/share-links.ts         Magic share-link CRUD (token, password, expiry, permissions)
+src/lib/share-link-session.ts  Password-unlock + reviewer-name cookies for /review
 src/lib/calendar-dates.ts      Month-grid date math shared by server + client
 src/lib/media.ts               Media record CRUD
 src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
@@ -155,12 +171,13 @@ src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before e
 src/scripts/init-bucket.ts    One-time MinIO/S3 bucket + policy + CORS setup (npm run s3:init)
 src/app/login                 Public login page
 src/app/(app)/dashboard       Workspace list + create
-src/app/(app)/w/[slug]        Workspace shell: overview, posts (Feed/Calendar/Grid), accounts, members
+src/app/(app)/w/[slug]        Workspace shell: overview, posts (Feed/Calendar/Grid), share, accounts, members
 src/app/api/connect/          Meta/LinkedIn "connect account" OAuth flow (not NextAuth login)
-src/app/review/[token]        Public magic-link review route (stub, built out in Phase 4)
+src/app/review/[token]        Public magic-link review page + its own actions.ts
 src/components/post-composer.tsx   Master text + per-channel overrides + media picker
 src/components/post-calendar.tsx   Drag-and-drop month calendar
-src/components/post-comments.tsx   Inline internal comment thread
-src/components/previews/      Facebook/Instagram/LinkedIn mockup preview cards
+src/components/post-comments.tsx   Inline internal comment thread (Feed)
+src/components/review/             Password gate, review comments, review post card (public page)
+src/components/previews/      Facebook/Instagram/LinkedIn mockup preview cards (shared by composer + review)
 docker-compose.yml            Local Postgres + Redis + MinIO
 ```

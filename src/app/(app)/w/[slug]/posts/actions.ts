@@ -4,7 +4,14 @@ import { z } from "zod";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listSocialAccounts } from "@/lib/social-accounts";
-import { savePost, deletePost, reschedulePost, getPost } from "@/lib/posts";
+import {
+  savePost,
+  deletePost,
+  reschedulePost,
+  getPost,
+  submitForApproval,
+  revertToDraft,
+} from "@/lib/posts";
 import { addInternalComment, setCommentResolved } from "@/lib/comments";
 import { createMedia } from "@/lib/media";
 import {
@@ -140,4 +147,22 @@ export async function toggleCommentResolvedAction(
   await getPost(workspace.id, postId);
 
   await setCommentResolved(postId, commentId, resolved);
+}
+
+export async function submitForApprovalAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const postId = formData.get("postId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  await submitForApproval(workspace.id, postId, user.id);
+}
+
+export async function revertToDraftAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const postId = formData.get("postId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceMember(slug, user.id);
+  await revertToDraft(workspace.id, postId, user.id);
 }

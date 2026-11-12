@@ -20,7 +20,7 @@ export default async function WorkspaceLayout({
       <div className="flex items-center gap-3 px-6 py-3">
         <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
       </div>
-      <WorkspaceNav slug={slug} />
+      <WorkspaceNav slug={slug} isOwner={workspace.role === "OWNER"} />
       <div className="flex-1 p-6">{children}</div>
     </div>
   );

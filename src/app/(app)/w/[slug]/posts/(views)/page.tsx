@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PLATFORM_META } from "@/components/platform-meta";
 import { PostComments } from "@/components/post-comments";
-import { deletePostAction } from "../actions";
+import { deletePostAction, submitForApprovalAction, revertToDraftAction } from "../actions";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Entwurf",
@@ -47,7 +47,9 @@ export default async function FeedPage({ params }: { params: Promise<{ slug: str
                   {post.masterText || <span className="text-muted-foreground">(kein Text)</span>}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <Badge variant="secondary">{STATUS_LABELS[post.status]}</Badge>
+                  <Badge variant={post.status === "APPROVED" ? "default" : "secondary"}>
+                    {STATUS_LABELS[post.status]}
+                  </Badge>
                   {post.scheduledAt && (
                     <span className="text-xs text-muted-foreground">
                       {dateFormatter.format(post.scheduledAt)}
@@ -59,13 +61,33 @@ export default async function FeedPage({ params }: { params: Promise<{ slug: str
                   })}
                 </div>
               </Link>
-              <form action={deletePostAction}>
-                <input type="hidden" name="slug" value={slug} />
-                <input type="hidden" name="postId" value={post.id} />
-                <Button type="submit" variant="ghost" size="sm">
-                  Löschen
-                </Button>
-              </form>
+              <div className="flex items-center gap-1">
+                {post.status === "DRAFT" && (
+                  <form action={submitForApprovalAction}>
+                    <input type="hidden" name="slug" value={slug} />
+                    <input type="hidden" name="postId" value={post.id} />
+                    <Button type="submit" variant="outline" size="sm">
+                      Zur Freigabe einreichen
+                    </Button>
+                  </form>
+                )}
+                {(post.status === "PENDING_APPROVAL" || post.status === "APPROVED") && (
+                  <form action={revertToDraftAction}>
+                    <input type="hidden" name="slug" value={slug} />
+                    <input type="hidden" name="postId" value={post.id} />
+                    <Button type="submit" variant="ghost" size="sm">
+                      Zurück zu Entwurf
+                    </Button>
+                  </form>
+                )}
+                <form action={deletePostAction}>
+                  <input type="hidden" name="slug" value={slug} />
+                  <input type="hidden" name="postId" value={post.id} />
+                  <Button type="submit" variant="ghost" size="sm">
+                    Löschen
+                  </Button>
+                </form>
+              </div>
             </div>
             <PostComments slug={slug} postId={post.id} initialComments={post.comments} />
           </CardContent>

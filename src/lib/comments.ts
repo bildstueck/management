@@ -16,6 +16,13 @@ export async function addInternalComment(postId: string, userId: string, text: s
   });
 }
 
+export async function addExternalComment(postId: string, authorName: string, text: string) {
+  return prisma.comment.create({
+    data: { postId, authorType: "EXTERNAL", authorName, text },
+    include: { authorUser: { select: { id: true, name: true, email: true } } },
+  });
+}
+
 export async function setCommentResolved(postId: string, commentId: string, resolved: boolean) {
   await prisma.comment.updateMany({ where: { id: commentId, postId }, data: { resolved } });
 }
