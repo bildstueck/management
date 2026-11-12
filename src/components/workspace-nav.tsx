@@ -9,6 +9,7 @@ export function WorkspaceNav({ slug }: { slug: string }) {
   const base = `/w/${slug}`;
   const tabs = [
     { href: base, label: "Übersicht" },
+    { href: `${base}/posts`, label: "Beiträge" },
     { href: `${base}/accounts`, label: "Accounts" },
     { href: `${base}/members`, label: "Mitglieder" },
   ];
@@ -16,7 +17,8 @@ export function WorkspaceNav({ slug }: { slug: string }) {
   return (
     <nav className="flex gap-1 border-b px-6">
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        const active =
+          tab.href === base ? pathname === base : pathname.startsWith(`${tab.href}/`) || pathname === tab.href;
         return (
           <Link
             key={tab.href}

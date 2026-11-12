@@ -98,6 +98,7 @@ model Post {
   workspaceId   String
   status        PostStatus @default(DRAFT)
   masterText    String?
+  masterMediaIds String[] @default([]) // default media for new channel variants
   scheduledAt   DateTime?
   publishedAt   DateTime?
   createdBy     User       @relation("PostCreatedBy", fields: [createdById], references: [id])

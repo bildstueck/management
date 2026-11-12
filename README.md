@@ -2,7 +2,7 @@
 
 Self-hosted social media planning, client-approval and auto-publishing platform (Facebook, Instagram, LinkedIn) — a Planable-style workflow you run yourself.
 
-See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)** and **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)**.
+See [`/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md`](/Users/thilofriedrich/.claude/plans/zesty-wandering-umbrella.md) for the full architecture and phase roadmap. This repo currently covers **Phase 0 (project setup)**, **Phase 1 (workspaces, team membership, Meta/LinkedIn account connections)** and **Phase 2 (post composer, media upload, per-channel preview)**.
 
 ## Tech stack
 
@@ -76,6 +76,7 @@ Then, as a workspace Owner, add them to a workspace from `/w/<slug>/members` by 
 | `npm run db:seed` | Run `prisma/seed.ts` |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run worker:tokens` | Background job that silently refreshes LinkedIn tokens before they expire (run alongside `npm run dev`) |
+| `npm run s3:init` | One-time: creates the media bucket and makes it public-read + CORS-enabled (needed before uploading media) |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
 
 ## Connecting social accounts (Phase 1)
@@ -106,6 +107,22 @@ Once connected, Page access tokens obtained this way are derived from a long-liv
 5. By default, only personal-profile posting (`w_member_social`) is requested. Company Page posting needs the **Community Management API** product, which requires LinkedIn's (slower) approval process. Once approved, set `LINKEDIN_ORGANIZATION_SCOPES_ENABLED=true` in `.env` — requesting those scopes before approval makes the *entire* OAuth request fail, so leave it `false` until then.
 6. If your app is also an approved Marketing Developer Platform partner, LinkedIn issues a `refresh_token` on connect; `npm run worker:tokens` uses it to silently refresh access tokens before their 60-day expiry. Without that approval, access tokens still work for 60 days but the Owner has to reconnect manually afterwards (surfaced on the Accounts page).
 
+## Post composer & media (Phase 2)
+
+From `/w/<slug>/posts`, any workspace member can draft a post: one master text + media, optionally customized per connected channel, with a live mockup preview (desktop/mobile toggle) for Facebook, Instagram and LinkedIn.
+
+Media uploads go straight from the browser to S3/MinIO via a presigned URL (the file never passes through the Next.js server) — see `src/lib/s3-upload.ts` and `requestMediaUploadAction`/`confirmMediaUploadAction` in `src/app/(app)/w/[slug]/posts/actions.ts`. Before uploading anything for the first time, run:
+
+```bash
+npm run s3:init
+```
+
+This creates the bucket (if missing) and makes it public-read + CORS-enabled for the app's origin — required both for the browser-side upload and because Instagram/Facebook fetch media by public URL when actually publishing (Phase 5).
+
+Only JPEG/PNG images and MP4/MOV videos are accepted at upload time (8MB / 1GB sanity caps); exact per-platform limits (aspect ratio, duration, carousel size) are enforced later, when actually publishing.
+
+Posts only reach `DRAFT` status in this phase — the Feed/Calendar/Grid views, the approval workflow and scheduled/automatic publishing are Phases 3–5.
+
 ## Project structure
 
 ```
@@ -118,12 +135,18 @@ src/lib/workspaces.ts         Workspace CRUD + membership checks
 src/lib/members.ts            Add/remove/change-role for workspace members
 src/lib/social-accounts.ts    Connected-account storage (encrypted tokens)
 src/lib/oauth/                Meta + LinkedIn OAuth clients, signed OAuth "state" helper
+src/lib/posts.ts              Post + per-channel variant CRUD
+src/lib/media.ts               Media record CRUD
+src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
 src/lib/              Prisma client, Redis, BullMQ queue, S3 client, token encryption
 src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before expiry
+src/scripts/init-bucket.ts    One-time MinIO/S3 bucket + policy + CORS setup (npm run s3:init)
 src/app/login                 Public login page
 src/app/(app)/dashboard       Workspace list + create
-src/app/(app)/w/[slug]        Workspace shell: overview, accounts, members
+src/app/(app)/w/[slug]        Workspace shell: overview, posts, accounts, members
 src/app/api/connect/          Meta/LinkedIn "connect account" OAuth flow (not NextAuth login)
 src/app/review/[token]        Public magic-link review route (stub, built out in Phase 4)
+src/components/post-composer.tsx   Master text + per-channel overrides + media picker
+src/components/previews/      Facebook/Instagram/LinkedIn mockup preview cards
 docker-compose.yml            Local Postgres + Redis + MinIO
 ```

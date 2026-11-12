@@ -21,12 +21,19 @@ export default async function WorkspaceOverviewPage({
           <Badge variant="secondary">{workspace.role === "OWNER" ? "Owner" : "Editor"}</Badge>
         </h1>
         <p className="text-muted-foreground">
-          Beiträge, Kalender und Freigaben folgen in Phase 2–4. Aktuell: Accounts verbinden und
-          Team verwalten.
+          Kalender- und Grid-Ansichten sowie Kunden-Freigaben folgen in Phase 3–4.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Link href={`/w/${workspace.slug}/posts`}>
+          <Card className="transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle>Beiträge</CardTitle>
+              <CardDescription>Entwürfe erstellen, Vorschau pro Kanal.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
         <Link href={`/w/${workspace.slug}/accounts`}>
           <Card className="transition-colors hover:border-primary">
             <CardHeader>

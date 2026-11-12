@@ -13,7 +13,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "worker:tokens": "tsx src/workers/token-refresh.ts"
+    "worker:tokens": "tsx src/workers/token-refresh.ts",
+    "s3:init": "tsx src/scripts/init-bucket.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
