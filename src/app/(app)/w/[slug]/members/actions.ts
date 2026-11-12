@@ -1,0 +1,50 @@
+"use server";
+
+import { requireUser } from "@/lib/dal";
+import { requireWorkspaceRole } from "@/lib/workspaces";
+import { addMemberByEmail, removeMember, updateMemberRole, MemberActionError } from "@/lib/members";
+import type { MembershipRole } from "@prisma/client";
+
+export type MemberActionState = { error?: string } | undefined;
+
+export async function addMemberAction(
+  _prevState: MemberActionState,
+  formData: FormData,
+): Promise<MemberActionState> {
+  const slug = formData.get("slug") as string;
+  const email = (formData.get("email") as string | null)?.trim();
+  const role = (formData.get("role") as MembershipRole | null) ?? "EDITOR";
+
+  if (!email) return { error: "Bitte eine E-Mail angeben." };
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
+
+  try {
+    await addMemberByEmail(workspace.id, email, role);
+  } catch (error) {
+    if (error instanceof MemberActionError) return { error: error.message };
+    throw error;
+  }
+}
+
+export async function removeMemberAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const membershipId = formData.get("membershipId") as string;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
+
+  await removeMember(workspace.id, membershipId);
+}
+
+export async function updateMemberRoleAction(formData: FormData) {
+  const slug = formData.get("slug") as string;
+  const membershipId = formData.get("membershipId") as string;
+  const role = formData.get("role") as MembershipRole;
+
+  const user = await requireUser();
+  const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
+
+  await updateMemberRole(workspace.id, membershipId, role);
+}
