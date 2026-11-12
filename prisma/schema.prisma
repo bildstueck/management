@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Auth / Team ----------
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String       @unique
+  passwordHash  String?
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  memberships   Membership[]
+  postsCreated  Post[]       @relation("PostCreatedBy")
+  comments      Comment[]
+  approvalEvents ApprovalEvent[]
+}
+
+enum MembershipRole {
+  OWNER
+  EDITOR
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  role        MembershipRole @default(EDITOR)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  createdAt   DateTime       @default(now())
+
+  @@unique([userId, workspaceId])
+}
+
+// ---------- Workspace ----------
+
+model Workspace {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  memberships    Membership[]
+  socialAccounts SocialAccount[]
+  posts          Post[]
+  media          Media[]
+  shareLinks     ShareLink[]
+}
+
+// ---------- Social accounts (OAuth connections) ----------
+
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+  LINKEDIN
+}
+
+model SocialAccount {
+  id                String    @id @default(cuid())
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId       String
+  platform          Platform
+  externalAccountId String // e.g. FB Page ID, IG Business Account ID, LinkedIn URN
+  displayName       String
+  avatarUrl         String?
+  accessTokenEnc    String // encrypted at rest
+  refreshTokenEnc   String?
+  tokenExpiresAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  postChannelVariants PostChannelVariant[]
+
+  @@unique([workspaceId, platform, externalAccountId])
+}
+
+// ---------- Posts ----------
+
+enum PostStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId   String
+  status        PostStatus @default(DRAFT)
+  masterText    String?
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  createdBy     User       @relation("PostCreatedBy", fields: [createdById], references: [id])
+  createdById   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  channelVariants PostChannelVariant[]
+  comments        Comment[]
+  approvalEvents  ApprovalEvent[]
+  publishJobs     PublishJob[]
+}
+
+model PostChannelVariant {
+  id              String        @id @default(cuid())
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId          String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  text            String?
+  mediaIds        String[] // ordered list of Media.id for this channel's post
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([postId, socialAccountId])
+}
+
+// ---------- Media ----------
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Media {
+  id          String    @id @default(cuid())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  type        MediaType
+  storageKey  String // S3/R2 object key
+  url         String // public URL (required for IG Graph API uploads)
+  width       Int?
+  height      Int?
+  durationMs  Int?
+  createdAt   DateTime  @default(now())
+}
+
+// ---------- Collaboration / Approval ----------
+
+model ShareLink {
+  id           String    @id @default(cuid())
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId  String
+  token        String    @unique
+  passwordHash String?
+  expiresAt    DateTime?
+  canComment   Boolean   @default(true)
+  canApprove   Boolean   @default(true)
+  canEdit      Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+}
+
+enum CommentAuthorType {
+  INTERNAL
+  EXTERNAL
+}
+
+model Comment {
+  id          String            @id @default(cuid())
+  post        Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  authorType  CommentAuthorType
+  authorUser  User?             @relation(fields: [authorUserId], references: [id])
+  authorUserId String?
+  authorName  String? // display name for external reviewers (no account)
+  text        String
+  resolved    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+}
+
+enum ApprovalAction {
+  STATUS_CHANGED
+  APPROVED
+  COMMENTED
+  EDITED
+}
+
+model ApprovalEvent {
+  id          String         @id @default(cuid())
+  post        Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  action      ApprovalAction
+  fromStatus  PostStatus?
+  toStatus    PostStatus?
+  actorUser   User?          @relation(fields: [actorUserId], references: [id])
+  actorUserId String?
+  actorName   String? // for external reviewers via share link
+  note        String?
+  createdAt   DateTime       @default(now())
+}
+
+// ---------- Scheduler / Publishing ----------
+
+enum PublishJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model PublishJob {
+  id          String           @id @default(cuid())
+  post        Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  queueJobId  String? // BullMQ job id
+  status      PublishJobStatus @default(QUEUED)
+  errorMessage String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
