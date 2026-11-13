@@ -136,13 +136,14 @@ Setting a date (from the calendar or the composer's own date field) only sets `P
 
 ## Client approval via magic link (Phase 4)
 
-**Internal side:** a Draft is invisible to clients. From the Feed, click **"Zur Freigabe einreichen"** to move it to `PENDING_APPROVAL` (and **"Zurück zu Entwurf"** to pull it back for more edits). A workspace **Owner** manages share links from `/w/<slug>/share` — create one with an optional password, an optional expiry (in days), and three independent toggles: allow commenting, allow approving, allow editing the text. Deleting a link immediately revokes it.
+**Internal side:** a Draft is invisible to clients. From the Feed, click **"Zur Freigabe einreichen"** to move it to `PENDING_APPROVAL` (and **"Zurück zu Entwurf"** to pull it back for more edits). A workspace **Owner** manages invitation links from `/w/<slug>/share` — create one with an optional password, an optional expiry (in days), and four independent toggles: allow commenting, allow approving, allow editing the text, allow uploading media. Deleting a link immediately revokes it.
 
-**Client side:** the link (`/review/<token>`) needs no account. It shows every post with status `PENDING_APPROVAL` or later — never raw Drafts. Depending on the link's toggles, a visitor can:
+**Client side:** the link (`/review/<token>`) needs no account — it's the one thing you send a client, by WhatsApp or email, yourself. It shows every post with status `PENDING_APPROVAL` or later — never raw Drafts. Depending on the link's toggles, a visitor can:
 - view a live per-channel mockup (the same Facebook/Instagram/LinkedIn preview cards from the composer),
 - comment and mark comments done (stored as `Comment.authorType = EXTERNAL`, shown inline next to the team's own comments),
 - click **Freigeben** to approve a post (`PENDING_APPROVAL` → `APPROVED`),
-- edit the post's master text directly — logged as a plain-text version history entry (`ApprovalEvent.action = EDITED`, old → new) rather than a dedicated versions table; channels with their own customized text aren't touched by this.
+- edit the post's master text directly — logged as a plain-text version history entry (`ApprovalEvent.action = EDITED`, old → new) rather than a dedicated versions table; channels with their own customized text aren't touched by this,
+- **upload their own photos/videos** (`canUpload`, on by default) — these land straight in the workspace's media library, the same one the composer picks from, so the team can build the next posts from whatever the client just sent.
 
 The first time a visitor comments, approves, or edits, they're asked for a display name; it's remembered in a cookie (`reviewer_name`, scoped to `/review`) so they're not asked again. A password-protected link sets a separate, signed, link-specific cookie once unlocked — there's no shared "logged in as client" session across links.
 
@@ -170,9 +171,9 @@ Each channel is published by `src/lib/publishers/{facebook,instagram,linkedin}.t
 
 **A note for anyone adding worker-shared code:** `src/workers/*.ts` run as plain `tsx` processes, never through Next's bundler. Next aliases the `server-only` package to a no-op internally, but the real npm package (needed so plain Node can resolve the import at all) unconditionally throws — so none of the files a worker imports (directly or transitively) can have `import "server-only"` at the top. That's why `src/lib/posts.ts`, `media.ts`, `social-accounts.ts`, `publish-jobs.ts` and `src/lib/publishers/*` don't have it, even though they're server-only in spirit; nothing in this codebase imports them from a Client Component anyway (Client Components always go through a `"use server"` action file instead).
 
-## Notifications & tests (Phase 6)
+## Tests (Phase 6)
 
-Workspace members get an email (via `src/lib/email.ts`, any SMTP provider) when a client comments on or approves a post through a share link — internal activity (team comments, drafting) stays silent, since the team already knows what it did. Set `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` in `.env` to enable it; leave them unset and it's skipped (logged, nothing else breaks).
+No email notifications by design — comments and approvals are meant to be checked in the app itself (the agency communicates externally over WhatsApp/email on its own terms).
 
 ```bash
 npm run test       # vitest, once
@@ -252,8 +253,6 @@ src/lib/media.ts               Media record CRUD
 src/lib/s3-upload.ts           Presigned direct-to-S3/MinIO upload
 src/lib/publish-jobs.ts        PublishJob status tracking
 src/lib/publishers/           Facebook/Instagram/LinkedIn publishers + shared Graph API client
-src/lib/email.ts               SMTP wrapper (nodemailer)
-src/lib/notifications.ts       Email on client comment/approval
 src/lib/              Prisma client, Redis, BullMQ queue, S3 client, token encryption
 src/workers/token-refresh.ts  Background job: refreshes LinkedIn tokens before expiry
 src/workers/publish.ts        Background job: publishes SCHEDULED posts (npm run worker:publish)

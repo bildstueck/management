@@ -48,6 +48,9 @@ export function CreateShareLinkForm({ slug }: { slug: string }) {
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="canEdit" /> Text bearbeiten erlauben
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox name="canUpload" defaultChecked /> Medien hochladen erlauben
+        </label>
       </div>
 
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}

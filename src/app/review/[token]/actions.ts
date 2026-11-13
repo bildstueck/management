@@ -4,7 +4,13 @@ import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links"
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
 import { approvePost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
-import { notifyClientComment, notifyClientApproval } from "@/lib/notifications";
+import { createMedia } from "@/lib/media";
+import {
+  createPresignedUpload,
+  mediaTypeForContentType,
+  maxBytesForContentType,
+} from "@/lib/s3-upload";
+import { z } from "zod";
 
 // Public, token-authenticated actions for the magic-link review page
 // (src/app/review/[token]/page.tsx). There is no NextAuth session here —
@@ -48,16 +54,14 @@ export async function addReviewCommentAction(
 ) {
   const link = await requireLink(token);
   if (!link.canComment) throw new ShareLinkError("Kommentare sind für diesen Link nicht erlaubt.");
-  const post = await requirePostInWorkspace(link.workspaceId, postId);
+  await requirePostInWorkspace(link.workspaceId, postId);
 
   const trimmedText = text.trim();
   if (!trimmedText) throw new ShareLinkError("Kommentar darf nicht leer sein.");
   const authorName = name.trim() || "Kunde";
 
   await setReviewerName(authorName);
-  const comment = await addExternalComment(postId, authorName, trimmedText);
-  await notifyClientComment(link.workspace, postId, post.masterText ?? "", authorName, trimmedText);
-  return comment;
+  return addExternalComment(postId, authorName, trimmedText);
 }
 
 export async function toggleReviewCommentResolvedAction(
@@ -75,13 +79,11 @@ export async function toggleReviewCommentResolvedAction(
 export async function approveReviewPostAction(token: string, postId: string, name: string) {
   const link = await requireLink(token);
   if (!link.canApprove) throw new ShareLinkError("Freigeben ist für diesen Link nicht erlaubt.");
-  const post = await requirePostInWorkspace(link.workspaceId, postId);
+  await requirePostInWorkspace(link.workspaceId, postId);
 
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
-  const result = await approvePost(link.workspaceId, postId, { name: authorName });
-  await notifyClientApproval(link.workspace, postId, post.masterText ?? "", authorName);
-  return result;
+  return approvePost(link.workspaceId, postId, { name: authorName });
 }
 
 export async function editReviewPostTextAction(
@@ -97,4 +99,57 @@ export async function editReviewPostTextAction(
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
   await updatePostTextByReviewer(link.workspaceId, postId, newText, authorName);
+}
+
+// Lets a client submit their own photos/videos through the link — these
+// land in the workspace's media library for the team to use in posts, the
+// same library the composer picks from. Not attached to any post directly.
+export async function requestReviewMediaUploadAction(
+  token: string,
+  filename: string,
+  contentType: string,
+  sizeBytes: number,
+) {
+  const link = await requireLink(token);
+  if (!link.canUpload) throw new ShareLinkError("Hochladen ist für diesen Link nicht erlaubt.");
+
+  const mediaType = mediaTypeForContentType(contentType);
+  if (!mediaType) {
+    throw new ShareLinkError(`Dateityp "${contentType}" wird nicht unterstützt (nur JPEG/PNG/MP4).`);
+  }
+  const maxBytes = maxBytesForContentType(contentType);
+  if (sizeBytes > maxBytes) {
+    throw new ShareLinkError(`Datei zu groß (max. ${Math.round(maxBytes / 1024 / 1024)}MB).`);
+  }
+
+  const upload = await createPresignedUpload(link.workspaceId, filename, contentType);
+  return { ...upload, mediaType };
+}
+
+const ConfirmReviewMediaSchema = z.object({
+  storageKey: z.string().min(1),
+  url: z.url(),
+  type: z.enum(["IMAGE", "VIDEO"]),
+  width: z.number().int().positive().nullish(),
+  height: z.number().int().positive().nullish(),
+  durationMs: z.number().int().positive().nullish(),
+});
+
+export async function confirmReviewMediaUploadAction(
+  token: string,
+  input: z.infer<typeof ConfirmReviewMediaSchema>,
+) {
+  const link = await requireLink(token);
+  if (!link.canUpload) throw new ShareLinkError("Hochladen ist für diesen Link nicht erlaubt.");
+  const data = ConfirmReviewMediaSchema.parse(input);
+
+  return createMedia({
+    workspaceId: link.workspaceId,
+    type: data.type,
+    storageKey: data.storageKey,
+    url: data.url,
+    width: data.width,
+    height: data.height,
+    durationMs: data.durationMs,
+  });
 }

@@ -13,6 +13,7 @@ export type CreateShareLinkInput = {
   canComment: boolean;
   canApprove: boolean;
   canEdit: boolean;
+  canUpload: boolean;
 };
 
 export async function createShareLink(workspaceId: string, input: CreateShareLinkInput) {
@@ -28,6 +29,7 @@ export async function createShareLink(workspaceId: string, input: CreateShareLin
       canComment: input.canComment,
       canApprove: input.canApprove,
       canEdit: input.canEdit,
+      canUpload: input.canUpload,
     },
   });
 }

@@ -23,10 +23,11 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Freigabe-Links</h1>
+        <h1 className="text-2xl font-semibold">Einladungslinks</h1>
         <p className="text-muted-foreground">
-          Teile diesen Workspace mit Kunden — ohne Account. Sie sehen nur Beiträge, die bereits
-          &bdquo;Zur Freigabe&rdquo; eingereicht wurden.
+          Lade Kunden ohne Account zu diesem Workspace ein. Sie sehen Beiträge, die bereits
+          &bdquo;Zur Freigabe&rdquo; eingereicht wurden, können kommentieren, freigeben und eigene
+          Medien hochladen.
         </p>
       </div>
 
@@ -56,6 +57,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
                     {link.canComment && <Badge variant="secondary">Kommentare</Badge>}
                     {link.canApprove && <Badge variant="secondary">Freigabe</Badge>}
                     {link.canEdit && <Badge variant="secondary">Bearbeiten</Badge>}
+                    {link.canUpload && <Badge variant="secondary">Medien-Upload</Badge>}
                   </div>
                 </div>
                 <div className="flex gap-2">

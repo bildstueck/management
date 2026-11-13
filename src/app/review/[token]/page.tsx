@@ -4,6 +4,7 @@ import { listReviewablePosts } from "@/lib/posts";
 import { listMedia } from "@/lib/media";
 import { PasswordGate } from "@/components/review/password-gate";
 import { ReviewPostCard } from "@/components/review/review-post-card";
+import { ReviewUpload } from "@/components/review/review-upload";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ReviewPage({
@@ -44,6 +45,8 @@ export default async function ReviewPage({
         <h1 className="text-2xl font-semibold">{link.workspace.name}</h1>
         <p className="text-muted-foreground">Beiträge zur Freigabe.</p>
       </div>
+
+      {link.canUpload && <ReviewUpload token={token} />}
 
       {posts.length === 0 ? (
         <Card>

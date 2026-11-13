@@ -159,6 +159,7 @@ model ShareLink {
   canComment   Boolean   @default(true)
   canApprove   Boolean   @default(true)
   canEdit      Boolean   @default(false)
+  canUpload    Boolean   @default(true) // let the client submit their own photos/videos for the team to use
   createdAt    DateTime  @default(now())
 }
 

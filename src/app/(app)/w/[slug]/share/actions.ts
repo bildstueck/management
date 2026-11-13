@@ -28,6 +28,7 @@ export async function createShareLinkAction(
     canComment: formData.get("canComment") === "on",
     canApprove: formData.get("canApprove") === "on",
     canEdit: formData.get("canEdit") === "on",
+    canUpload: formData.get("canUpload") === "on",
   });
   return undefined;
 }
