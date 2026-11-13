@@ -31,5 +31,8 @@ export const proxy = auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Excludes Next.js internals and any request for a static file (has a dot
+  // in the last path segment, e.g. /brand/logo.png, /icon.png) — those are
+  // public assets and must never be redirected to /login.
+  matcher: ["/((?!_next/static|_next/image|.*\\..*$).*)"],
 };

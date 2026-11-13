@@ -21,7 +21,7 @@ export default async function WorkspaceOverviewPage({
           <Badge variant="secondary">{workspace.role === "OWNER" ? "Owner" : "Editor"}</Badge>
         </h1>
         <p className="text-muted-foreground">
-          Automatische Veröffentlichung folgt in Phase 5.
+          Beiträge planen, von Kunden freigeben lassen und automatisch veröffentlichen.
         </p>
       </div>
 
