@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getShareLinkByToken } from "@/lib/share-links";
 import { isShareLinkUnlocked, getReviewerName } from "@/lib/share-link-session";
 import { listReviewablePosts } from "@/lib/posts";
@@ -21,7 +22,7 @@ export default async function ReviewPage({
         <div>
           <h1 className="text-xl font-semibold">Link ungültig oder abgelaufen</h1>
           <p className="mt-2 text-muted-foreground">
-            Bitte frag die Agentur nach einem neuen Freigabe-Link.
+            Bitte frag die Agentur nach einem neuen Einladungslink.
           </p>
         </div>
       </div>
@@ -41,6 +42,13 @@ export default async function ReviewPage({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 p-6">
+      <Image
+        src="/brand/bildstueck-mark.png"
+        alt="bildstueck"
+        width={689}
+        height={416}
+        className="h-5 w-auto opacity-70"
+      />
       <div>
         <h1 className="text-2xl font-semibold">{link.workspace.name}</h1>
         <p className="text-muted-foreground">Beiträge zur Freigabe.</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,8 +22,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="flex items-center justify-between border-b px-6 py-3">
-        <Link href="/dashboard" className="font-semibold">
-          Social Planner
+        <Link href="/dashboard" className="flex items-center">
+          <Image
+            src="/brand/bildstueck-mark.png"
+            alt="bildstueck"
+            width={689}
+            height={416}
+            priority
+            className="h-6 w-auto"
+          />
         </Link>
 
         <div className="flex items-center gap-3">

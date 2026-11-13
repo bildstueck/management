@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Social Planner",
+  title: "bildstueck",
   description: "Self-hosted social media planning & approval platform.",
 };
 
