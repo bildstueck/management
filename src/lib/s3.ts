@@ -12,6 +12,13 @@ export const s3Client = new S3Client({
     accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
   },
+  // AWS SDK v3 defaults to adding a request checksum (x-amz-checksum-*),
+  // which gets baked into presigned URLs as a signed param. Our direct
+  // browser-to-S3 PUT doesn't send that header, so R2 (and MinIO) reject
+  // the upload with a signature mismatch — surfaced by the browser as a
+  // generic, misleading CORS error since the error response itself has no
+  // CORS headers. Disabling it keeps presigned PUT URLs plain.
+  requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
 export const S3_BUCKET = process.env.S3_BUCKET ?? "social-planner-media";
