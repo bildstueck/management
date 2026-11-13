@@ -4,6 +4,9 @@ import { GRAPH_VERSION, GRAPH_BASE } from "@/lib/meta-graph";
 // Meta Graph API — Facebook Login for Business flow (Pages + their linked
 // Instagram Business/Creator accounts).
 
+// Reference only — these are the permissions the Facebook Login for
+// Business Configuration (META_CONFIG_ID) must include; not sent directly
+// as a `scope` param (see buildMetaAuthorizeUrl below).
 export const META_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
@@ -21,13 +24,24 @@ function getAppCredentials() {
   return { clientId, clientSecret };
 }
 
+// New Meta apps get the "Facebook Login for Business" product instead of
+// classic Facebook Login — it authorizes via a Configuration (created in the
+// Meta dashboard under Facebook Login for Business > Configurations), not a
+// plain `scope` list. The configuration itself defines which permissions
+// (pages_show_list, instagram_content_publish, ...) are granted.
+function getConfigId() {
+  const configId = process.env.META_CONFIG_ID;
+  if (!configId) throw new Error("META_CONFIG_ID must be set.");
+  return configId;
+}
+
 export function buildMetaAuthorizeUrl(state: string, redirectUri: string): string {
   const { clientId } = getAppCredentials();
   const url = new URL(`https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
-  url.searchParams.set("scope", META_SCOPES);
+  url.searchParams.set("config_id", getConfigId());
   url.searchParams.set("response_type", "code");
   return url.toString();
 }

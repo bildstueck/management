@@ -90,13 +90,15 @@ From `/w/<slug>/accounts`, a workspace **Owner** can connect Facebook Pages (wit
 
 ### Meta App Setup (Facebook + Instagram)
 
-1. Go to <https://developers.facebook.com/apps> and create a new app (type: **Business**).
-2. Add the **Facebook Login** and **Instagram Graph API** products to the app.
-3. Under **App Settings → Basic**, note the **App ID** and **App Secret** → put them in `.env` as `META_APP_ID` / `META_APP_SECRET`.
-4. Under **Facebook Login → Settings**, add a **Valid OAuth Redirect URI** for each environment you use: `http://localhost:3000/api/connect/meta/callback` (local) and `https://your-project.vercel.app/api/connect/meta/callback` (production).
-5. Request the following permissions (needs **App Review** before they work for anyone other than the app's own admins/testers in Development Mode — see the chat history for what that means for connecting *any* client's Page):
+1. Go to <https://developers.facebook.com/apps> and create a new app (type: **Business**), picking the "Content-Management" use cases that cover Instagram and Page content (new Meta apps get the **Facebook Login for Business** product automatically, not classic Facebook Login).
+2. Under **App Settings → Basic**, note the **App ID** and **App Secret** → put them in `.env` as `META_APP_ID` / `META_APP_SECRET`.
+3. Under **Facebook Login for Business → Settings**, add a **Valid OAuth Redirect URI** for each environment you use: `http://localhost:3000/api/connect/meta/callback` (local) and `https://your-project.vercel.app/api/connect/meta/callback` (production).
+4. Under **Facebook Login for Business → Configurations**, create a Configuration granting:
    - `pages_show_list`, `pages_read_engagement`, `pages_manage_posts` (Facebook Page publishing)
    - `instagram_basic`, `instagram_content_publish` (Instagram publishing — requires the IG account to be a Business/Creator account linked to a Facebook Page)
+
+   Copy its **Configuration ID** → put it in `.env` as `META_CONFIG_ID`. This is what `buildMetaAuthorizeUrl` (`src/lib/oauth/meta.ts`) sends instead of a plain `scope` list — Facebook Login for Business authorizes via Configuration, not raw scopes (a plain `scope` param gets rejected with "Invalid Scopes").
+5. These permissions need **App Review** before they work for anyone other than the app's own Admins/Testers in Development Mode — see "App Roles" below for what that means for connecting *any* client's Page right away.
 6. While the app is still in **Development Mode**, add yourself/your test users as **Admins/Testers** under **App Roles** so you can connect accounts and test publishing before App Review approves the app for everyone else.
 7. Instagram's publish endpoint fetches media by URL, so `S3_PUBLIC_BASE_URL` must be a real, public HTTPS URL — see "Set up Cloudflare R2".
 8. The Graph API version is pinned in `src/lib/oauth/meta.ts` (`GRAPH_VERSION`, currently v26.0) — bump it there when Meta deprecates that version.
