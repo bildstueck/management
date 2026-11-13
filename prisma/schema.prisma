@@ -205,7 +205,6 @@ model ApprovalEvent {
 // ---------- Scheduler / Publishing ----------
 
 enum PublishJobStatus {
-  QUEUED
   RUNNING
   SUCCEEDED
   FAILED
@@ -215,8 +214,7 @@ model PublishJob {
   id          String           @id @default(cuid())
   post        Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId      String
-  queueJobId  String? // BullMQ job id
-  status      PublishJobStatus @default(QUEUED)
+  status      PublishJobStatus @default(RUNNING)
   errorMessage String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

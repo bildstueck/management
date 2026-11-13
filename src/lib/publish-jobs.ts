@@ -1,11 +1,8 @@
+import "server-only";
 import { prisma } from "@/lib/prisma";
 
-export function createPublishJob(postId: string, queueJobId: string) {
-  return prisma.publishJob.create({ data: { postId, queueJobId, status: "QUEUED" } });
-}
-
-export function markPublishJobRunning(jobId: string) {
-  return prisma.publishJob.update({ where: { id: jobId }, data: { status: "RUNNING" } });
+export function createRunningPublishJob(postId: string) {
+  return prisma.publishJob.create({ data: { postId, status: "RUNNING" } });
 }
 
 export function markPublishJobSucceeded(jobId: string) {
@@ -18,11 +15,4 @@ export function markPublishJobFailed(jobId: string, errorMessage: string) {
 
 export function getLatestPublishJob(postId: string) {
   return prisma.publishJob.findFirst({ where: { postId }, orderBy: { createdAt: "desc" } });
-}
-
-export async function cancelQueuedPublishJobs(postId: string) {
-  await prisma.publishJob.updateMany({
-    where: { postId, status: "QUEUED" },
-    data: { status: "FAILED", errorMessage: "Abgebrochen (zurück zu Entwurf/Freigegeben)." },
-  });
 }

@@ -1,0 +1,41 @@
+name: Scheduled jobs
+
+# Pings the deployed app's cron routes instead of running anything here —
+# all the real work (publishing, token refresh) happens in Vercel Functions
+# (src/app/api/cron/*). This exists only because Vercel's own free-tier cron
+# can run at most once a day, too coarse for "publish at a specific time".
+#
+# Needs two repo secrets (Settings -> Secrets and variables -> Actions):
+#   APP_URL      e.g. https://your-project.vercel.app
+#   CRON_SECRET  same value as the CRON_SECRET env var set in Vercel
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # publish: every 5 minutes
+    - cron: "17 4 * * *" # refresh-tokens: once daily
+  workflow_dispatch: {} # lets you trigger either job manually from the Actions tab
+
+jobs:
+  publish:
+    if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/publish
+        run: |
+          curl -fsS -X GET "$APP_URL/api/cron/publish" \
+            -H "Authorization: Bearer $CRON_SECRET"
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  refresh-tokens:
+    if: github.event.schedule == '17 4 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/refresh-tokens
+        run: |
+          curl -fsS -X GET "$APP_URL/api/cron/refresh-tokens" \
+            -H "Authorization: Bearer $CRON_SECRET"
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

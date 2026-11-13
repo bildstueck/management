@@ -1,7 +1,7 @@
 // Shared types for the per-platform publishers (src/lib/publishers/*).
 // A publisher takes one channel's resolved content and talks to that
-// platform's API directly — it doesn't know about Prisma/the DB; the
-// worker (src/workers/publish.ts) is what persists the result.
+// platform's API directly — it doesn't know about Prisma/the DB;
+// src/lib/publish-post.ts is what persists the result.
 
 export type PublishMedia = { type: "IMAGE" | "VIDEO"; url: string };
 

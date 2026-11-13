@@ -6,9 +6,12 @@ import { NextResponse } from "next/server";
 // users to /login. It is NOT the security boundary — every page/action/route
 // handler re-verifies the session itself (see the Data Access Layer pattern).
 
-// Public routes: login, NextAuth's own API routes, and the client-facing
-// magic-link review routes added in Phase 4 (/review/[token]).
-const PUBLIC_PATHS = ["/login", "/api/auth", "/review"];
+// Public routes: login, NextAuth's own API routes, the client-facing
+// magic-link review routes (/review/[token]), and the cron routes GitHub
+// Actions calls on a schedule — those check their own Bearer token
+// (CRON_SECRET), same "proxy is optimistic, the route is the real check"
+// pattern as /review.
+const PUBLIC_PATHS = ["/login", "/api/auth", "/review", "/api/cron"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
