@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { createOAuthState } from "@/lib/oauth/state";
-import { buildInstagramAuthorizeUrl } from "@/lib/oauth/instagram";
+import { buildInstagramAuthorizeUrl } from "@/lib/oauth/meta";
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("workspace");

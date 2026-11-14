@@ -1,10 +1,5 @@
 import { graphPost, graphGet, graphError } from "./graph-client";
-import { IG_GRAPH_BASE } from "@/lib/instagram-graph";
 import type { PublishInput, PublishMedia, PublishResult } from "./types";
-
-// Published via Instagram API with Instagram Login (graph.instagram.com),
-// not the Facebook Graph API — externalAccountId is the Instagram-scoped
-// user ID from src/lib/oauth/instagram.ts, not a Page-linked IG business ID.
 
 async function createContainer(
   igUserId: string,
@@ -24,7 +19,7 @@ async function createContainer(
   if (opts.isCarouselItem) body.is_carousel_item = true;
   if (opts.caption) body.caption = opts.caption;
 
-  const res = await graphPost(`/${igUserId}/media`, body, IG_GRAPH_BASE);
+  const res = await graphPost(`/${igUserId}/media`, body);
   const error = graphError(res);
   if (error) throw new Error(error);
   return res.id as string;
@@ -33,11 +28,7 @@ async function createContainer(
 async function waitUntilFinished(containerId: string, accessToken: string, timeoutMs = 120_000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const res = await graphGet(
-      `/${containerId}`,
-      { fields: "status_code", access_token: accessToken },
-      IG_GRAPH_BASE,
-    );
+    const res = await graphGet(`/${containerId}`, { fields: "status_code", access_token: accessToken });
     const status = res.status_code as string | undefined;
     if (status === "FINISHED") return;
     if (status === "ERROR" || status === "EXPIRED") {
@@ -48,9 +39,11 @@ async function waitUntilFinished(containerId: string, accessToken: string, timeo
   throw new Error("Zeitüberschreitung beim Warten auf die Instagram-Medienverarbeitung.");
 }
 
-// Instagram Graph API container flow: create a media container (one per
-// image/video, or one per carousel child), wait for video processing, then
-// publish. See https://developers.facebook.com/docs/instagram-platform/content-publishing.
+// Instagram Graph API container flow (via Unified Login's Business
+// Integration System User token, on graph.facebook.com — see
+// src/lib/oauth/meta.ts): create a media container (one per image/video, or
+// one per carousel child), wait for video processing, then publish. See
+// https://developers.facebook.com/docs/instagram-platform/content-publishing.
 export async function publishToInstagram(input: PublishInput): Promise<PublishResult> {
   const { accessToken, externalAccountId: igUserId, text, media } = input;
 
@@ -74,26 +67,21 @@ export async function publishToInstagram(input: PublishInput): Promise<PublishRe
         if (item.type === "VIDEO") await waitUntilFinished(childId, accessToken);
         childIds.push(childId);
       }
-      const carouselBody = await graphPost(
-        `/${igUserId}/media`,
-        {
-          media_type: "CAROUSEL",
-          children: childIds.join(","),
-          caption: text,
-          access_token: accessToken,
-        },
-        IG_GRAPH_BASE,
-      );
+      const carouselBody = await graphPost(`/${igUserId}/media`, {
+        media_type: "CAROUSEL",
+        children: childIds.join(","),
+        caption: text,
+        access_token: accessToken,
+      });
       const error = graphError(carouselBody);
       if (error) return { success: false, error };
       creationId = carouselBody.id as string;
     }
 
-    const publishBody = await graphPost(
-      `/${igUserId}/media_publish`,
-      { creation_id: creationId, access_token: accessToken },
-      IG_GRAPH_BASE,
-    );
+    const publishBody = await graphPost(`/${igUserId}/media_publish`, {
+      creation_id: creationId,
+      access_token: accessToken,
+    });
     const publishError = graphError(publishBody);
     if (publishError) return { success: false, error: publishError };
     return { success: true, externalPostId: publishBody.id as string };

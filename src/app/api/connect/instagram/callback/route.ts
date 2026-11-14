@@ -3,10 +3,10 @@ import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { verifyOAuthState } from "@/lib/oauth/state";
 import {
-  exchangeInstagramCodeForToken,
-  exchangeInstagramForLongLivedToken,
-  fetchInstagramProfile,
-} from "@/lib/oauth/instagram";
+  exchangeMetaCodeForToken,
+  listAssignedInstagramAccounts,
+  fetchInstagramProfilePicture,
+} from "@/lib/oauth/meta";
 import { upsertSocialAccount } from "@/lib/social-accounts";
 
 function accountsUrl(origin: string, slug: string, params: Record<string, string>) {
@@ -40,22 +40,27 @@ export async function GET(request: NextRequest) {
 
   try {
     const redirectUri = new URL("/api/connect/instagram/callback", origin).toString();
-    const shortLived = await exchangeInstagramCodeForToken(code, redirectUri);
-    const longLived = await exchangeInstagramForLongLivedToken(shortLived.accessToken);
-    const profile = await fetchInstagramProfile(shortLived.userId, longLived.access_token);
+    // Unified Login exchanges the code the same way as the Facebook Page
+    // flow and returns a Business Integration System User access token —
+    // no long-lived-token exchange step, unlike a Facebook user token.
+    const { access_token: systemUserToken } = await exchangeMetaCodeForToken(code, redirectUri);
+    const accounts = await listAssignedInstagramAccounts(systemUserToken);
 
-    await upsertSocialAccount({
-      workspaceId: workspace.id,
-      platform: "INSTAGRAM",
-      externalAccountId: profile.id,
-      displayName: profile.username,
-      avatarUrl: profile.profile_picture_url,
-      accessToken: longLived.access_token,
-      tokenExpiresAt: new Date(Date.now() + longLived.expires_in * 1000),
-    });
+    for (const account of accounts) {
+      const avatarUrl = await fetchInstagramProfilePicture(account.id, systemUserToken);
+      await upsertSocialAccount({
+        workspaceId: workspace.id,
+        platform: "INSTAGRAM",
+        externalAccountId: account.id,
+        displayName: account.username,
+        avatarUrl,
+        accessToken: systemUserToken,
+        tokenExpiresAt: null, // Business Integration System User tokens don't expire on a fixed schedule
+      });
+    }
 
     return NextResponse.redirect(
-      accountsUrl(origin, workspace.slug, { connected: "instagram", count: "1" }),
+      accountsUrl(origin, workspace.slug, { connected: "instagram", count: String(accounts.length) }),
     );
   } catch (error) {
     console.error("Instagram connect failed:", error);

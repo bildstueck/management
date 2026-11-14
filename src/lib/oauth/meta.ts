@@ -1,16 +1,22 @@
 import "server-only";
 import { GRAPH_VERSION, GRAPH_BASE } from "@/lib/meta-graph";
 
-// Meta Graph API — Facebook Login for Business flow (Pages + their linked
-// Instagram Business/Creator accounts).
+// Meta Graph API — Facebook Login for Business, used for two separate
+// Configurations under the same Meta app: one for Facebook Pages
+// (META_CONFIG_ID), one for Instagram "Unified Login"
+// (META_INSTAGRAM_CONFIG_ID). Meta retired the old standalone "Instagram
+// API with Instagram Login" (api.instagram.com) for new apps in favor of
+// Unified Login, which reuses this exact same facebook.com/dialog/oauth +
+// graph.facebook.com/oauth/access_token flow — just a different
+// Configuration, and no Facebook Page required for the Instagram one.
 
-// Reference only — these are the permissions the Facebook Login for
-// Business Configuration (META_CONFIG_ID) must include; not sent directly
-// as a `scope` param (see buildMetaAuthorizeUrl below). Facebook Pages
-// only — Instagram connects separately via src/lib/oauth/instagram.ts.
-export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].join(
+// Reference only — these are the permissions each Configuration must
+// include; not sent directly as a `scope` param (see
+// buildMetaAuthorizeUrl below).
+export const META_PAGE_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].join(
   ",",
 );
+export const META_INSTAGRAM_SCOPES = ["instagram_basic", "instagram_content_publish"].join(",");
 
 function getAppCredentials() {
   const clientId = process.env.META_APP_ID;
@@ -21,26 +27,29 @@ function getAppCredentials() {
   return { clientId, clientSecret };
 }
 
-// New Meta apps get the "Facebook Login for Business" product instead of
-// classic Facebook Login — it authorizes via a Configuration (created in the
-// Meta dashboard under Facebook Login for Business > Configurations), not a
-// plain `scope` list. The configuration itself defines which permissions
-// (pages_show_list, instagram_content_publish, ...) are granted.
-function getConfigId() {
-  const configId = process.env.META_CONFIG_ID;
-  if (!configId) throw new Error("META_CONFIG_ID must be set.");
+function getConfigId(envVar: "META_CONFIG_ID" | "META_INSTAGRAM_CONFIG_ID") {
+  const configId = process.env[envVar];
+  if (!configId) throw new Error(`${envVar} must be set.`);
   return configId;
 }
 
-export function buildMetaAuthorizeUrl(state: string, redirectUri: string): string {
+function buildAuthorizeUrl(state: string, redirectUri: string, configId: string): string {
   const { clientId } = getAppCredentials();
   const url = new URL(`https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
-  url.searchParams.set("config_id", getConfigId());
+  url.searchParams.set("config_id", configId);
   url.searchParams.set("response_type", "code");
   return url.toString();
+}
+
+export function buildMetaAuthorizeUrl(state: string, redirectUri: string): string {
+  return buildAuthorizeUrl(state, redirectUri, getConfigId("META_CONFIG_ID"));
+}
+
+export function buildInstagramAuthorizeUrl(state: string, redirectUri: string): string {
+  return buildAuthorizeUrl(state, redirectUri, getConfigId("META_INSTAGRAM_CONFIG_ID"));
 }
 
 type MetaTokenResponse = { access_token: string; token_type: string; expires_in?: number };
@@ -121,4 +130,40 @@ export async function listMetaPages(longLivedUserToken: string): Promise<MetaPag
   }
 
   return pages;
+}
+
+export type AssignedInstagramAccount = { id: string; username: string };
+
+// Instagram Unified Login: lists the Instagram professional accounts the
+// Business Integration System User token was granted — no Facebook Page
+// involved. See https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-unified-login/authentication.
+export async function listAssignedInstagramAccounts(
+  systemUserToken: string,
+): Promise<AssignedInstagramAccount[]> {
+  const url = new URL(`${GRAPH_BASE}/me/assigned_instagram_accounts`);
+  url.searchParams.set("fields", "id,username");
+  url.searchParams.set("access_token", systemUserToken);
+
+  const res = await fetch(url.toString());
+  const body = (await res.json()) as { data: AssignedInstagramAccount[]; error?: unknown };
+  if (!res.ok) {
+    throw new Error(
+      `Meta Graph API error (/me/assigned_instagram_accounts): ${JSON.stringify(body.error ?? body)}`,
+    );
+  }
+  return body.data;
+}
+
+export async function fetchInstagramProfilePicture(
+  instagramAccountId: string,
+  systemUserToken: string,
+): Promise<string | null> {
+  const url = new URL(`${GRAPH_BASE}/${instagramAccountId}`);
+  url.searchParams.set("fields", "profile_picture_url");
+  url.searchParams.set("access_token", systemUserToken);
+
+  const res = await fetch(url.toString());
+  const body = (await res.json()) as { profile_picture_url?: string; error?: unknown };
+  if (!res.ok) return null;
+  return body.profile_picture_url ?? null;
 }
