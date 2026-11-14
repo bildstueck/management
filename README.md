@@ -88,22 +88,34 @@ Then, as a workspace Owner, add them to a workspace from `/w/<slug>/members` by 
 
 From `/w/<slug>/accounts`, a workspace **Owner** can connect Facebook Pages (with their linked Instagram Business/Creator accounts) and LinkedIn. Both go through a custom OAuth "connect" flow (`/api/connect/meta`, `/api/connect/linkedin` + their `/callback` routes) — this is deliberately separate from the NextAuth login at `/api/auth/*`, since it's "let this workspace publish as this external account", not "sign in as this app user". Connecting once pulls in **every** Page/account/Company Page the connecting user has access to — not just one.
 
-### Meta App Setup (Facebook + Instagram)
+### Meta App Setup (Facebook Pages)
 
-1. Go to <https://developers.facebook.com/apps> and create a new app (type: **Business**), picking the "Content-Management" use cases that cover Instagram and Page content (new Meta apps get the **Facebook Login for Business** product automatically, not classic Facebook Login).
+Facebook and Instagram are two **separate** connect flows in this app — Instagram no longer needs a linked Facebook Page (see "Instagram App Setup" below). This section is Facebook Pages only.
+
+1. Go to <https://developers.facebook.com/apps> and create a new app (type: **Business**), picking the "Content-Management" use case that covers Page content (new Meta apps get the **Facebook Login for Business** product automatically, not classic Facebook Login).
 2. Under **App Settings → Basic**, note the **App ID** and **App Secret** → put them in `.env` as `META_APP_ID` / `META_APP_SECRET`.
 3. Under **Facebook Login for Business → Settings**, add a **Valid OAuth Redirect URI** for each environment you use: `http://localhost:3000/api/connect/meta/callback` (local) and `https://your-project.vercel.app/api/connect/meta/callback` (production).
-4. Under **Facebook Login for Business → Configurations**, create a Configuration granting:
-   - `pages_show_list`, `pages_read_engagement`, `pages_manage_posts` (Facebook Page publishing)
-   - `instagram_basic`, `instagram_content_publish` (Instagram publishing — requires the IG account to be a Business/Creator account linked to a Facebook Page)
+4. Under **Facebook Login for Business → Configurations**, create a Configuration granting `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`.
 
    Copy its **Configuration ID** → put it in `.env` as `META_CONFIG_ID`. This is what `buildMetaAuthorizeUrl` (`src/lib/oauth/meta.ts`) sends instead of a plain `scope` list — Facebook Login for Business authorizes via Configuration, not raw scopes (a plain `scope` param gets rejected with "Invalid Scopes").
 5. These permissions need **App Review** before they work for anyone other than the app's own Admins/Testers in Development Mode — see "App Roles" below for what that means for connecting *any* client's Page right away.
 6. While the app is still in **Development Mode**, add yourself/your test users as **Admins/Testers** under **App Roles** so you can connect accounts and test publishing before App Review approves the app for everyone else.
-7. Instagram's publish endpoint fetches media by URL, so `S3_PUBLIC_BASE_URL` must be a real, public HTTPS URL — see "Set up Cloudflare R2".
-8. The Graph API version is pinned in `src/lib/oauth/meta.ts` (`GRAPH_VERSION`, currently v26.0) — bump it there when Meta deprecates that version.
+7. The Graph API version is pinned in `src/lib/meta-graph.ts` (`GRAPH_VERSION`, currently v26.0) — bump it there when Meta deprecates that version.
 
 Once connected, Page access tokens obtained this way are derived from a long-lived user token and don't expire on a fixed schedule — there's no silent refresh for them. If Meta ever invalidates one (password change, long inactivity, revoked permission), the Accounts page shows it as expired/expiring and the Owner just reconnects.
+
+### Instagram App Setup (Instagram API with Instagram Login)
+
+Connects an Instagram professional (Business or Creator) account **directly** — the account doesn't need a linked Facebook Page at all, unlike the classic Page-linked Instagram flow. This is a separate product from Meta above, but lives in the **same** Meta app.
+
+1. In the same app from "Meta App Setup", go to **App Dashboard → Add Product** and add **"Instagram"** (not Facebook Login).
+2. Under its **API setup with Instagram Login → Settings**, note the **Instagram App ID** and **Instagram App Secret** (different numbers from `META_APP_ID`/`META_APP_SECRET`) → put them in `.env` as `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET`.
+3. Add an **OAuth redirect URI** for each environment: `http://localhost:3000/api/connect/instagram/callback` (local) and `https://your-project.vercel.app/api/connect/instagram/callback` (production).
+4. The permissions requested (`instagram_business_basic`, `instagram_business_content_publish`, hardcoded in `src/lib/oauth/instagram.ts`) need **App Review** before they work for anyone other than the app's own Admins/Testers — same Development Mode caveat as Facebook above.
+5. Instagram's publish endpoint fetches media by URL, so `S3_PUBLIC_BASE_URL` must be a real, public HTTPS URL — see "Set up Cloudflare R2".
+6. The API version is pinned in `src/lib/instagram-graph.ts` (`IG_GRAPH_VERSION`) — bump it there when Meta deprecates that version.
+
+Instagram access tokens are long-lived (~60 days) and self-refresh in place (no separate refresh token) — the daily `/api/cron/refresh-tokens` run handles this automatically once a token is within 48h of expiry.
 
 ### LinkedIn App Setup
 
@@ -224,7 +236,7 @@ src/lib/dal.ts                requireUser() — the real auth guard, used in pag
 src/lib/workspaces.ts         Workspace CRUD + membership checks
 src/lib/members.ts            Add/remove/change-role for workspace members
 src/lib/social-accounts.ts    Connected-account storage (encrypted tokens)
-src/lib/oauth/                Meta + LinkedIn OAuth clients, signed OAuth "state" helper
+src/lib/oauth/                Meta (Pages), Instagram, LinkedIn OAuth clients, signed OAuth "state" helper
 src/lib/posts.ts              Post CRUD, status workflow, calendar/grid queries
 src/lib/comments.ts            Internal + external post comments
 src/lib/share-links.ts         Invitation-link CRUD (token, password, expiry, permissions)
@@ -240,7 +252,7 @@ src/app/api/cron/              Publish + token-refresh routes, pinged by GitHub 
 src/app/login                 Public login page
 src/app/(app)/dashboard       Workspace list + create
 src/app/(app)/w/[slug]        Workspace shell: overview, posts (Feed/Calendar/Grid), share, accounts, members
-src/app/api/connect/          Meta/LinkedIn "connect account" OAuth flow (not NextAuth login)
+src/app/api/connect/          Meta/Instagram/LinkedIn "connect account" OAuth flow (not NextAuth login)
 src/app/review/[token]        Public invitation-link review page + its own actions.ts
 src/components/post-composer.tsx   Master text + per-channel overrides + media picker
 src/components/post-calendar.tsx   Drag-and-drop month calendar

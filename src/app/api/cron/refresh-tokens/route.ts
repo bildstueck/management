@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptRefreshToken } from "@/lib/social-accounts";
+import { decryptRefreshToken, decryptAccessToken } from "@/lib/social-accounts";
 import { encryptToken } from "@/lib/encryption";
 import { refreshLinkedInAccessToken } from "@/lib/oauth/linkedin";
+import { refreshInstagramLongLivedToken } from "@/lib/oauth/instagram";
 
 // Hit daily by .github/workflows/cron.yml. Same Bearer-token boundary as
 // /api/cron/publish — see that route's comment.
 //
-// LinkedIn-only: it's the one platform here that issues a refresh_token
-// (when the app has programmatic refresh access). Meta Page tokens, derived
-// from a long-lived user token, have no silent-refresh mechanism — an
+// Two refresh mechanisms, since Facebook Page tokens (derived from a
+// long-lived user token) have no silent-refresh mechanism at all — an
 // expiring one just shows up as "Läuft bald ab" on the Accounts page,
-// prompting the Owner to reconnect.
+// prompting the Owner to reconnect:
+// - LinkedIn issues a refresh_token (when the app has programmatic refresh
+//   access) that exchanges for a new access token.
+// - Instagram (API with Instagram Login) has no separate refresh token —
+//   the long-lived access token refreshes itself in place.
 export const maxDuration = 60;
 
 const REFRESH_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -28,12 +32,13 @@ export async function GET(request: NextRequest) {
   }
 
   const dueBefore = new Date(Date.now() + REFRESH_WINDOW_MS);
-  const accounts = await prisma.socialAccount.findMany({
+
+  const linkedinAccounts = await prisma.socialAccount.findMany({
     where: { platform: "LINKEDIN", refreshTokenEnc: { not: null }, tokenExpiresAt: { lt: dueBefore } },
   });
 
   let refreshed = 0;
-  for (const account of accounts) {
+  for (const account of linkedinAccounts) {
     const refreshToken = decryptRefreshToken(account);
     if (!refreshToken) continue;
 
@@ -55,5 +60,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked: accounts.length, refreshed });
+  const instagramAccounts = await prisma.socialAccount.findMany({
+    where: { platform: "INSTAGRAM", tokenExpiresAt: { lt: dueBefore } },
+  });
+
+  for (const account of instagramAccounts) {
+    try {
+      const result = await refreshInstagramLongLivedToken(decryptAccessToken(account));
+      await prisma.socialAccount.update({
+        where: { id: account.id },
+        data: {
+          accessTokenEnc: encryptToken(result.access_token),
+          tokenExpiresAt: new Date(Date.now() + result.expires_in * 1000),
+        },
+      });
+      refreshed++;
+    } catch (error) {
+      console.error(`[cron/refresh-tokens] Failed for account ${account.id}:`, error);
+    }
+  }
+
+  const checked = linkedinAccounts.length + instagramAccounts.length;
+  return NextResponse.json({ checked, refreshed });
 }

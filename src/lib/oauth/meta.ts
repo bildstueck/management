@@ -6,14 +6,11 @@ import { GRAPH_VERSION, GRAPH_BASE } from "@/lib/meta-graph";
 
 // Reference only — these are the permissions the Facebook Login for
 // Business Configuration (META_CONFIG_ID) must include; not sent directly
-// as a `scope` param (see buildMetaAuthorizeUrl below).
-export const META_SCOPES = [
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_posts",
-  "instagram_basic",
-  "instagram_content_publish",
-].join(",");
+// as a `scope` param (see buildMetaAuthorizeUrl below). Facebook Pages
+// only — Instagram connects separately via src/lib/oauth/instagram.ts.
+export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].join(
+  ",",
+);
 
 function getAppCredentials() {
   const clientId = process.env.META_APP_ID;
@@ -88,32 +85,27 @@ export async function exchangeMetaForLongLivedToken(
   });
 }
 
-export type MetaPageWithInstagram = {
+export type MetaPage = {
   id: string;
   name: string;
   access_token: string;
-  instagram_business_account?: {
-    id: string;
-    username?: string;
-    profile_picture_url?: string;
-  };
 };
 
 type MetaPagesResponse = {
-  data: MetaPageWithInstagram[];
+  data: MetaPage[];
   paging?: { next?: string };
 };
 
-// Lists the Facebook Pages the user manages, with their linked Instagram
-// Business/Creator account (if any). Follows pagination defensively, but
-// caps at a handful of pages — this is a connect-time call, not a sync job.
-export async function listMetaPagesWithInstagram(
-  longLivedUserToken: string,
-): Promise<MetaPageWithInstagram[]> {
-  const pages: MetaPageWithInstagram[] = [];
+// Lists the Facebook Pages the user manages. Instagram connects separately
+// via src/lib/oauth/instagram.ts (Instagram API with Instagram Login), so
+// this no longer looks up a Page's linked Instagram Business account.
+// Follows pagination defensively, but caps at a handful of pages — this is
+// a connect-time call, not a sync job.
+export async function listMetaPages(longLivedUserToken: string): Promise<MetaPage[]> {
+  const pages: MetaPage[] = [];
   let url: string | undefined = new URL(`${GRAPH_BASE}/me/accounts`).toString();
   const initialParams = new URLSearchParams({
-    fields: "id,name,access_token,instagram_business_account{id,username,profile_picture_url}",
+    fields: "id,name,access_token",
     access_token: longLivedUserToken,
   });
   url = `${url}?${initialParams.toString()}`;

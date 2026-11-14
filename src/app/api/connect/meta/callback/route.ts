@@ -5,7 +5,7 @@ import { verifyOAuthState } from "@/lib/oauth/state";
 import {
   exchangeMetaCodeForToken,
   exchangeMetaForLongLivedToken,
-  listMetaPagesWithInstagram,
+  listMetaPages,
 } from "@/lib/oauth/meta";
 import { upsertSocialAccount } from "@/lib/social-accounts";
 
@@ -42,8 +42,11 @@ export async function GET(request: NextRequest) {
     const redirectUri = new URL("/api/connect/meta/callback", origin).toString();
     const shortLived = await exchangeMetaCodeForToken(code, redirectUri);
     const longLived = await exchangeMetaForLongLivedToken(shortLived.access_token);
-    const pages = await listMetaPagesWithInstagram(longLived.access_token);
+    const pages = await listMetaPages(longLived.access_token);
 
+    // Facebook Pages only — Instagram connects separately via
+    // /api/connect/instagram (Instagram API with Instagram Login), which
+    // needs no linked Facebook Page.
     for (const page of pages) {
       await upsertSocialAccount({
         workspaceId: workspace.id,
@@ -53,18 +56,6 @@ export async function GET(request: NextRequest) {
         accessToken: page.access_token,
         tokenExpiresAt: null, // page tokens derived from a long-lived user token don't expire on a fixed schedule
       });
-
-      if (page.instagram_business_account) {
-        await upsertSocialAccount({
-          workspaceId: workspace.id,
-          platform: "INSTAGRAM",
-          externalAccountId: page.instagram_business_account.id,
-          displayName: page.instagram_business_account.username ?? page.name,
-          avatarUrl: page.instagram_business_account.profile_picture_url,
-          accessToken: page.access_token,
-          tokenExpiresAt: null,
-        });
-      }
     }
 
     return NextResponse.redirect(

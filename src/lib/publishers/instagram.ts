@@ -1,5 +1,10 @@
 import { graphPost, graphGet, graphError } from "./graph-client";
+import { IG_GRAPH_BASE } from "@/lib/instagram-graph";
 import type { PublishInput, PublishMedia, PublishResult } from "./types";
+
+// Published via Instagram API with Instagram Login (graph.instagram.com),
+// not the Facebook Graph API — externalAccountId is the Instagram-scoped
+// user ID from src/lib/oauth/instagram.ts, not a Page-linked IG business ID.
 
 async function createContainer(
   igUserId: string,
@@ -19,7 +24,7 @@ async function createContainer(
   if (opts.isCarouselItem) body.is_carousel_item = true;
   if (opts.caption) body.caption = opts.caption;
 
-  const res = await graphPost(`/${igUserId}/media`, body);
+  const res = await graphPost(`/${igUserId}/media`, body, IG_GRAPH_BASE);
   const error = graphError(res);
   if (error) throw new Error(error);
   return res.id as string;
@@ -28,7 +33,11 @@ async function createContainer(
 async function waitUntilFinished(containerId: string, accessToken: string, timeoutMs = 120_000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const res = await graphGet(`/${containerId}`, { fields: "status_code", access_token: accessToken });
+    const res = await graphGet(
+      `/${containerId}`,
+      { fields: "status_code", access_token: accessToken },
+      IG_GRAPH_BASE,
+    );
     const status = res.status_code as string | undefined;
     if (status === "FINISHED") return;
     if (status === "ERROR" || status === "EXPIRED") {
@@ -65,21 +74,26 @@ export async function publishToInstagram(input: PublishInput): Promise<PublishRe
         if (item.type === "VIDEO") await waitUntilFinished(childId, accessToken);
         childIds.push(childId);
       }
-      const carouselBody = await graphPost(`/${igUserId}/media`, {
-        media_type: "CAROUSEL",
-        children: childIds.join(","),
-        caption: text,
-        access_token: accessToken,
-      });
+      const carouselBody = await graphPost(
+        `/${igUserId}/media`,
+        {
+          media_type: "CAROUSEL",
+          children: childIds.join(","),
+          caption: text,
+          access_token: accessToken,
+        },
+        IG_GRAPH_BASE,
+      );
       const error = graphError(carouselBody);
       if (error) return { success: false, error };
       creationId = carouselBody.id as string;
     }
 
-    const publishBody = await graphPost(`/${igUserId}/media_publish`, {
-      creation_id: creationId,
-      access_token: accessToken,
-    });
+    const publishBody = await graphPost(
+      `/${igUserId}/media_publish`,
+      { creation_id: creationId, access_token: accessToken },
+      IG_GRAPH_BASE,
+    );
     const publishError = graphError(publishBody);
     if (publishError) return { success: false, error: publishError };
     return { success: true, externalPostId: publishBody.id as string };

@@ -51,7 +51,13 @@ export default async function AccountsPage({
         {canManage && (
           <div className="flex gap-2">
             <Button variant="outline" render={<a href={`/api/connect/meta?workspace=${slug}`} />}>
-              Facebook / Instagram verbinden
+              Facebook verbinden
+            </Button>
+            <Button
+              variant="outline"
+              render={<a href={`/api/connect/instagram?workspace=${slug}`} />}
+            >
+              Instagram verbinden
             </Button>
             <Button
               variant="outline"
@@ -65,7 +71,9 @@ export default async function AccountsPage({
 
       {connected && (
         <p className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-          {count} Account(s) über {connected === "meta" ? "Meta" : "LinkedIn"} verbunden.
+          {count} Account(s) über{" "}
+          {connected === "meta" ? "Facebook" : connected === "instagram" ? "Instagram" : "LinkedIn"}{" "}
+          verbunden.
         </p>
       )}
       {error && (
