@@ -2,12 +2,13 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Upload, Check } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   requestReviewMediaUploadAction,
   confirmReviewMediaUploadAction,
+  deleteReviewMediaAction,
 } from "@/app/review/[token]/actions";
 
 type UploadedItem = { id: string; url: string; type: "IMAGE" | "VIDEO" };
@@ -16,6 +17,19 @@ export function ReviewUpload({ token }: { token: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<UploadedItem[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(mediaId: string) {
+    setDeletingId(mediaId);
+    try {
+      await deleteReviewMediaAction(token, mediaId);
+      setUploaded((prev) => prev.filter((item) => item.id !== mediaId));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Löschen fehlgeschlagen.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -56,9 +70,7 @@ export function ReviewUpload({ token }: { token: string }) {
     <Card>
       <CardHeader>
         <CardTitle>Material hochladen</CardTitle>
-        <CardDescription>
-          Fotos oder Videos direkt hochladen — die Agentur nutzt sie für die nächsten Beiträge.
-        </CardDescription>
+        <CardDescription>Fotos oder Videos direkt hochladen.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <input
@@ -95,9 +107,16 @@ export function ReviewUpload({ token }: { token: string }) {
                     Video
                   </div>
                 )}
-                <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Check className="size-2.5" />
-                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(item.id)}
+                  disabled={deletingId === item.id}
+                  aria-label="Löschen"
+                  title="Löschen"
+                  className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-destructive"
+                >
+                  <X className="size-3" />
+                </button>
               </div>
             ))}
           </div>

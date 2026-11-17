@@ -124,11 +124,30 @@ export default async function ReviewPage({
         )}
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
         <div>
           <h1 className="text-2xl font-semibold">{greeting}</h1>
           <p className="text-muted-foreground">Beiträge zur Freigabe.</p>
         </div>
+
+        {others.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-xl border bg-background p-4">
+            <h2 className="text-sm font-semibold text-muted-foreground">
+              Bereits freigegeben ({others.length})
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {others.map((post) => (
+                <a
+                  key={post.id}
+                  href={`#post-${post.id}`}
+                  className="max-w-full truncate rounded-full border px-3 py-1 text-sm hover:border-primary"
+                >
+                  {post.masterText?.slice(0, 40) || "(kein Text)"}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {link.canUpload && <ReviewUpload token={token} />}
 

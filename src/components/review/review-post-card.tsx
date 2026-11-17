@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import type { Platform, PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,6 +104,7 @@ export function ReviewPostCard({
   const [name, setName] = useState(reviewerName);
   const [showHistory, setShowHistory] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [channelsOpen, setChannelsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(comments.length);
   const [isPending, startTransition] = useTransition();
 
@@ -223,34 +224,43 @@ export function ReviewPostCard({
 
         {channels.length > 0 && (
           <div className="px-5">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2.5 text-muted-foreground"
+              onClick={() => setChannelsOpen((v) => !v)}
+            >
+              {channelsOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
               Vorschau pro Kanal
-            </p>
-            <Tabs defaultValue={channels[0].id}>
-              <TabsList>
-                {channels.map((channel) => (
-                  <TabsTrigger key={channel.id} value={channel.id}>
-                    {PLATFORM_META[channel.platform].label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {channels.map((channel) => {
-                const props = {
-                  accountName: channel.accountName,
-                  avatarUrl: channel.avatarUrl,
-                  text: channel.text ?? "",
-                  media: channel.media,
-                  mode: "mobile" as const,
-                };
-                return (
-                  <TabsContent key={channel.id} value={channel.id} className="pt-3">
-                    {channel.platform === "FACEBOOK" && <FacebookPreview {...props} />}
-                    {channel.platform === "INSTAGRAM" && <InstagramPreview {...props} />}
-                    {channel.platform === "LINKEDIN" && <LinkedInPreview {...props} />}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
+            </Button>
+            {channelsOpen && (
+              <Tabs defaultValue={channels[0].id} className="mt-1">
+                <TabsList>
+                  {channels.map((channel) => (
+                    <TabsTrigger key={channel.id} value={channel.id}>
+                      {PLATFORM_META[channel.platform].label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {channels.map((channel) => {
+                  const props = {
+                    accountName: channel.accountName,
+                    avatarUrl: channel.avatarUrl,
+                    text: channel.text ?? "",
+                    media: channel.media,
+                    mode: "mobile" as const,
+                  };
+                  return (
+                    <TabsContent key={channel.id} value={channel.id} className="pt-3">
+                      {channel.platform === "FACEBOOK" && <FacebookPreview {...props} />}
+                      {channel.platform === "INSTAGRAM" && <InstagramPreview {...props} />}
+                      {channel.platform === "LINKEDIN" && <LinkedInPreview {...props} />}
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
+            )}
           </div>
         )}
 

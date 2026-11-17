@@ -62,12 +62,12 @@ export function MiniCalendar({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <div className="grid grid-cols-7 border-b bg-muted/40">
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="py-1.5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+              className="py-2 text-center text-xs font-semibold tracking-wide text-muted-foreground uppercase"
             >
               {label}
             </div>
@@ -82,14 +82,14 @@ export function MiniCalendar({
 
             const cell = (
               <div
-                className={`flex h-14 flex-col items-center justify-center gap-1 border-r border-b last:border-r-0 ${
+                className={`flex h-20 flex-col items-center justify-center gap-1.5 border-r border-b last:border-r-0 ${
                   inMonth ? "bg-background" : "bg-muted/10"
                 } ${dayPosts.length > 0 ? "hover:bg-muted/40" : ""}`}
               >
                 <span
-                  className={`flex size-6 items-center justify-center rounded-full text-xs ${
+                  className={`flex size-7 items-center justify-center rounded-full text-sm ${
                     isToday
-                      ? "bg-primary font-semibold text-primary-foreground"
+                      ? "bg-destructive font-semibold text-white"
                       : inMonth
                         ? "text-foreground"
                         : "text-muted-foreground/50"
@@ -98,7 +98,7 @@ export function MiniCalendar({
                   {day.getDate()}
                 </span>
                 <span
-                  className={`size-1.5 rounded-full ${dayPosts.length > 0 ? "bg-primary" : "bg-transparent"}`}
+                  className={`size-2 rounded-full ${dayPosts.length > 0 ? "bg-primary" : "bg-transparent"}`}
                 />
               </div>
             );

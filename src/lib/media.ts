@@ -19,6 +19,10 @@ export function createMedia(input: CreateMediaInput) {
   return prisma.media.create({ data: input });
 }
 
+export async function deleteMedia(workspaceId: string, mediaId: string) {
+  await prisma.media.deleteMany({ where: { id: mediaId, workspaceId } });
+}
+
 export async function getMediaByIds(workspaceId: string, ids: string[]) {
   if (ids.length === 0) return [];
   const media = await prisma.media.findMany({ where: { workspaceId, id: { in: ids } } });

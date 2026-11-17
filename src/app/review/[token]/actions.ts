@@ -5,7 +5,7 @@ import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links"
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
 import { approvePost, rejectPost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
-import { createMedia } from "@/lib/media";
+import { createMedia, deleteMedia } from "@/lib/media";
 import {
   createPresignedUpload,
   mediaTypeForContentType,
@@ -182,4 +182,14 @@ export async function confirmReviewMediaUploadAction(
     height: data.height,
     durationMs: data.durationMs,
   });
+}
+
+// Lets a client remove something they just uploaded through this same link
+// — the upload widget only ever shows items uploaded in the current browser
+// session, so this can't be used to reach into the rest of the workspace's
+// media library.
+export async function deleteReviewMediaAction(token: string, mediaId: string) {
+  const link = await requireLink(token);
+  if (!link.canUpload) throw new ShareLinkError("Hochladen ist für diesen Link nicht erlaubt.");
+  await deleteMedia(link.workspaceId, mediaId);
 }
