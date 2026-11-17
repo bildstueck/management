@@ -48,7 +48,10 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
             <Card key={link.id}>
               <CardContent className="flex items-center justify-between gap-4 py-4">
                 <div>
-                  <p className="font-mono text-sm">{url}</p>
+                  {link.recipientName && (
+                    <p className="text-sm font-semibold">{link.recipientName}</p>
+                  )}
+                  <p className="font-mono text-sm text-muted-foreground">{url}</p>
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     {link.passwordHash && <Badge variant="secondary">Passwortgeschützt</Badge>}
                     {link.expiresAt && (

@@ -8,6 +8,7 @@ export function listShareLinks(workspaceId: string) {
 }
 
 export type CreateShareLinkInput = {
+  recipientName?: string | null;
   password?: string | null;
   expiresAt?: Date | null;
   canComment: boolean;
@@ -24,6 +25,7 @@ export async function createShareLink(workspaceId: string, input: CreateShareLin
     data: {
       workspaceId,
       token,
+      recipientName: input.recipientName || null,
       passwordHash,
       expiresAt: input.expiresAt ?? null,
       canComment: input.canComment,

@@ -18,12 +18,24 @@ export default async function ReviewPage({
 
   if (!link) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-center">
-        <div>
-          <h1 className="text-xl font-semibold">Link ungültig oder abgelaufen</h1>
-          <p className="mt-2 text-muted-foreground">
-            Bitte frag die Agentur nach einem neuen Einladungslink.
-          </p>
+      <div className="flex min-h-full flex-1 flex-col">
+        <header className="flex items-center border-b px-6 py-3">
+          <Image
+            src="/brand/bildstueck-mark.png"
+            alt="bildstueck"
+            width={689}
+            height={416}
+            priority
+            className="h-6 w-auto"
+          />
+        </header>
+        <div className="flex flex-1 items-center justify-center p-6 text-center">
+          <div>
+            <h1 className="text-xl font-semibold">Link ungültig oder abgelaufen</h1>
+            <p className="mt-2 text-muted-foreground">
+              Bitte frag die Agentur nach einem neuen Einladungslink.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -80,18 +92,27 @@ export default async function ReviewPage({
     );
   }
 
+  const greeting = link.recipientName ? `Hallo ${link.recipientName}` : link.workspace.name;
+
   return (
-    <div className="min-h-full bg-muted/30">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <div className="flex min-h-full flex-1 flex-col">
+      <header className="flex items-center justify-between border-b px-6 py-3">
         <Image
           src="/brand/bildstueck-mark.png"
           alt="bildstueck"
           width={689}
           height={416}
-          className="h-5 w-auto opacity-70"
+          priority
+          className="h-6 w-auto"
         />
+        {link.recipientName && (
+          <span className="text-sm text-muted-foreground">{link.recipientName}</span>
+        )}
+      </header>
+
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
         <div>
-          <h1 className="text-2xl font-semibold">{link.workspace.name}</h1>
+          <h1 className="text-2xl font-semibold">{greeting}</h1>
           <p className="text-muted-foreground">Beiträge zur Freigabe.</p>
         </div>
 
@@ -123,7 +144,7 @@ export default async function ReviewPage({
             )}
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

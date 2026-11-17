@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { createWorkspace } from "@/lib/workspaces";
 
@@ -15,5 +16,6 @@ export async function createWorkspaceAction(
   if (!name) return { error: "Bitte einen Namen angeben." };
 
   const workspace = await createWorkspace(user.id, name);
+  revalidatePath("/dashboard");
   redirect(`/w/${workspace.slug}`);
 }

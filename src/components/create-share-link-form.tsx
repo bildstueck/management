@@ -20,6 +20,20 @@ export function CreateShareLinkForm({ slug }: { slug: string }) {
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="slug" value={slug} />
 
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="recipientName">Name der Person/Firma (optional)</Label>
+        <Input
+          id="recipientName"
+          name="recipientName"
+          type="text"
+          placeholder="z. B. Familie Ebert"
+        />
+        <p className="text-xs text-muted-foreground">
+          Erscheint als Begrüßung oben auf der Freigabeseite, z. B. &bdquo;Hallo Familie
+          Ebert&ldquo;.
+        </p>
+      </div>
+
       <div className="flex flex-wrap gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="password">Passwort (optional)</Label>

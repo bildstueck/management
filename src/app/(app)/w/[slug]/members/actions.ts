@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { addMemberByEmail, removeMember, updateMemberRole, MemberActionError } from "@/lib/members";
@@ -26,6 +27,7 @@ export async function addMemberAction(
     if (error instanceof MemberActionError) return { error: error.message };
     throw error;
   }
+  revalidatePath(`/w/${slug}/members`);
 }
 
 export async function removeMemberAction(formData: FormData) {
@@ -36,6 +38,7 @@ export async function removeMemberAction(formData: FormData) {
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
 
   await removeMember(workspace.id, membershipId);
+  revalidatePath(`/w/${slug}/members`);
 }
 
 export async function updateMemberRoleAction(formData: FormData) {
@@ -47,4 +50,5 @@ export async function updateMemberRoleAction(formData: FormData) {
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
 
   await updateMemberRole(workspace.id, membershipId, role);
+  revalidatePath(`/w/${slug}/members`);
 }

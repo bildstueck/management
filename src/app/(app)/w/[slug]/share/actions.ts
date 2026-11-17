@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { createShareLink, deleteShareLink } from "@/lib/share-links";
@@ -11,6 +12,7 @@ export async function createShareLinkAction(
   formData: FormData,
 ): Promise<CreateShareLinkState> {
   const slug = formData.get("slug") as string;
+  const recipientName = (formData.get("recipientName") as string | null)?.trim() || null;
   const password = (formData.get("password") as string | null)?.trim() || null;
   const expiresInDays = Number(formData.get("expiresInDays") ?? "");
 
@@ -23,6 +25,7 @@ export async function createShareLinkAction(
       : null;
 
   await createShareLink(workspace.id, {
+    recipientName,
     password,
     expiresAt,
     canComment: formData.get("canComment") === "on",
@@ -30,6 +33,7 @@ export async function createShareLinkAction(
     canEdit: formData.get("canEdit") === "on",
     canUpload: formData.get("canUpload") === "on",
   });
+  revalidatePath(`/w/${slug}/share`);
   return undefined;
 }
 
@@ -40,4 +44,5 @@ export async function deleteShareLinkAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
   await deleteShareLink(workspace.id, id);
+  revalidatePath(`/w/${slug}/share`);
 }

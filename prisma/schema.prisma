@@ -9,16 +9,16 @@ datasource db {
 // ---------- Auth / Team ----------
 
 model User {
-  id            String       @id @default(cuid())
-  name          String?
-  email         String       @unique
-  passwordHash  String?
-  image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  memberships   Membership[]
-  postsCreated  Post[]       @relation("PostCreatedBy")
-  comments      Comment[]
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  passwordHash   String?
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  memberships    Membership[]
+  postsCreated   Post[]          @relation("PostCreatedBy")
+  comments       Comment[]
   approvalEvents ApprovalEvent[]
 }
 
@@ -93,18 +93,18 @@ enum PostStatus {
 }
 
 model Post {
-  id            String     @id @default(cuid())
-  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId   String
-  status        PostStatus @default(DRAFT)
-  masterText    String?
-  masterMediaIds String[] @default([]) // default media for new channel variants
-  scheduledAt   DateTime?
-  publishedAt   DateTime?
-  createdBy     User       @relation("PostCreatedBy", fields: [createdById], references: [id])
-  createdById   String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id             String     @id @default(cuid())
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId    String
+  status         PostStatus @default(DRAFT)
+  masterText     String?
+  masterMediaIds String[]   @default([]) // default media for new channel variants
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  createdBy      User       @relation("PostCreatedBy", fields: [createdById], references: [id])
+  createdById    String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   channelVariants PostChannelVariant[]
   comments        Comment[]
@@ -113,16 +113,16 @@ model Post {
 }
 
 model PostChannelVariant {
-  id              String        @id @default(cuid())
-  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId          String
-  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  socialAccountId String
-  text            String?
-  mediaIds        String[] // ordered list of Media.id for this channel's post
+  id                  String        @id @default(cuid())
+  post                Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId              String
+  socialAccount       SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  socialAccountId     String
+  text                String?
+  mediaIds            String[] // ordered list of Media.id for this channel's post
   publishedExternalId String? // platform's post ID once published; lets a retry skip channels that already succeeded
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   @@unique([postId, socialAccountId])
 }
@@ -150,17 +150,18 @@ model Media {
 // ---------- Collaboration / Approval ----------
 
 model ShareLink {
-  id           String    @id @default(cuid())
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId  String
-  token        String    @unique
-  passwordHash String?
-  expiresAt    DateTime?
-  canComment   Boolean   @default(true)
-  canApprove   Boolean   @default(true)
-  canEdit      Boolean   @default(false)
-  canUpload    Boolean   @default(true) // let the client submit their own photos/videos for the team to use
-  createdAt    DateTime  @default(now())
+  id            String    @id @default(cuid())
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId   String
+  token         String    @unique
+  recipientName String? // set by the agency when creating the link, shown on the review page header
+  passwordHash  String?
+  expiresAt     DateTime?
+  canComment    Boolean   @default(true)
+  canApprove    Boolean   @default(true)
+  canEdit       Boolean   @default(false)
+  canUpload     Boolean   @default(true) // let the client submit their own photos/videos for the team to use
+  createdAt     DateTime  @default(now())
 }
 
 enum CommentAuthorType {
@@ -169,16 +170,16 @@ enum CommentAuthorType {
 }
 
 model Comment {
-  id          String            @id @default(cuid())
-  post        Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId      String
-  authorType  CommentAuthorType
-  authorUser  User?             @relation(fields: [authorUserId], references: [id])
+  id           String            @id @default(cuid())
+  post         Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String
+  authorType   CommentAuthorType
+  authorUser   User?             @relation(fields: [authorUserId], references: [id])
   authorUserId String?
-  authorName  String? // display name for external reviewers (no account)
-  text        String
-  resolved    Boolean           @default(false)
-  createdAt   DateTime          @default(now())
+  authorName   String? // display name for external reviewers (no account)
+  text         String
+  resolved     Boolean           @default(false)
+  createdAt    DateTime          @default(now())
 }
 
 enum ApprovalAction {
@@ -211,11 +212,11 @@ enum PublishJobStatus {
 }
 
 model PublishJob {
-  id          String           @id @default(cuid())
-  post        Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId      String
-  status      PublishJobStatus @default(RUNNING)
+  id           String           @id @default(cuid())
+  post         Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String
+  status       PublishJobStatus @default(RUNNING)
   errorMessage String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }

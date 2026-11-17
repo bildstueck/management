@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listSocialAccounts } from "@/lib/social-accounts";
@@ -22,6 +23,16 @@ import {
   maxBytesForContentType,
 } from "@/lib/s3-upload";
 import { publishPost } from "@/lib/publish-post";
+
+// Next.js 16 does not re-render the current route after a Server Action
+// unless the action explicitly asks for it — every mutation here needs this
+// or the Feed/Calendar/Grid views (and the workspace overview, which embeds
+// the calendar) keep showing stale data until a manual reload.
+function revalidatePosts(slug: string, postId?: string) {
+  revalidatePath(`/w/${slug}/posts`, "layout");
+  revalidatePath(`/w/${slug}`);
+  if (postId) revalidatePath(`/w/${slug}/posts/${postId}`);
+}
 
 export async function requestMediaUploadAction(
   slug: string,
@@ -103,6 +114,7 @@ export async function savePostAction(slug: string, input: z.infer<typeof SavePos
     channels,
     scheduledAt: data.scheduledAt === undefined ? undefined : data.scheduledAt ? new Date(`${data.scheduledAt}T09:00:00`) : null,
   });
+  revalidatePosts(slug, post.id);
   return { id: post.id };
 }
 
@@ -113,6 +125,7 @@ export async function deletePostAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await deletePost(workspace.id, postId);
+  revalidatePosts(slug);
 }
 
 // `isoDate` is a plain "YYYY-MM-DD" (from a date-only picker or a calendar
@@ -125,6 +138,7 @@ export async function reschedulePostAction(slug: string, postId: string, isoDate
   const workspace = await requireWorkspaceMember(slug, user.id);
   const date = isoDate ? new Date(`${isoDate}T09:00:00`) : null;
   await reschedulePost(workspace.id, postId, date);
+  revalidatePosts(slug, postId);
 }
 
 export async function addCommentAction(slug: string, postId: string, text: string) {
@@ -136,7 +150,9 @@ export async function addCommentAction(slug: string, postId: string, text: strin
   // Defense in depth: the post must actually belong to this workspace.
   await getPost(workspace.id, postId);
 
-  return addInternalComment(postId, user.id, trimmed);
+  const comment = await addInternalComment(postId, user.id, trimmed);
+  revalidatePosts(slug, postId);
+  return comment;
 }
 
 export async function toggleCommentResolvedAction(
@@ -150,6 +166,7 @@ export async function toggleCommentResolvedAction(
   await getPost(workspace.id, postId);
 
   await setCommentResolved(postId, commentId, resolved);
+  revalidatePosts(slug, postId);
 }
 
 export async function submitForApprovalAction(formData: FormData) {
@@ -159,6 +176,7 @@ export async function submitForApprovalAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await submitForApproval(workspace.id, postId, user.id);
+  revalidatePosts(slug, postId);
 }
 
 export async function revertToDraftAction(formData: FormData) {
@@ -168,6 +186,7 @@ export async function revertToDraftAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await revertToDraft(workspace.id, postId, user.id);
+  revalidatePosts(slug, postId);
 }
 
 // Marks an APPROVED (or previously FAILED) post SCHEDULED. If its
@@ -181,6 +200,7 @@ export async function schedulePostAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await scheduleForPublish(workspace.id, postId, user.id);
+  revalidatePosts(slug, postId);
 }
 
 // Same status transition as schedulePostAction, but publishes right away in
@@ -194,6 +214,7 @@ export async function publishNowAction(formData: FormData) {
 
   await scheduleForPublish(workspace.id, postId, user.id);
   await publishPost(postId);
+  revalidatePosts(slug, postId);
 }
 
 export async function cancelScheduleAction(formData: FormData) {
@@ -203,4 +224,5 @@ export async function cancelScheduleAction(formData: FormData) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await cancelSchedule(workspace.id, postId, user.id);
+  revalidatePosts(slug, postId);
 }

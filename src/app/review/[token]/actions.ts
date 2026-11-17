@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links";
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
 import { approvePost, rejectPost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
@@ -83,7 +84,10 @@ export async function approveReviewPostAction(token: string, postId: string, nam
 
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
-  return approvePost(link.workspaceId, postId, { name: authorName });
+  const result = await approvePost(link.workspaceId, postId, { name: authorName });
+  revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
+  revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  return result;
 }
 
 export async function rejectReviewPostAction(
@@ -99,12 +103,15 @@ export async function rejectReviewPostAction(
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
   const trimmedReason = reason.trim();
-  return rejectPost(
+  const result = await rejectPost(
     link.workspaceId,
     postId,
     { name: authorName },
     trimmedReason ? `Abgelehnt: ${trimmedReason}` : "Abgelehnt",
   );
+  revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
+  revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  return result;
 }
 
 export async function editReviewPostTextAction(
@@ -120,6 +127,8 @@ export async function editReviewPostTextAction(
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
   await updatePostTextByReviewer(link.workspaceId, postId, newText, authorName);
+  revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
+  revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
 }
 
 // Lets a client submit their own photos/videos through the link — these
