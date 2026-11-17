@@ -105,7 +105,7 @@ export function ReviewCalendar({
             );
 
             return dayPosts.length > 0 ? (
-              <a key={dateKey} href={`#post-${dayPosts[0].id}`}>
+              <a key={dateKey} href={`/review/${token}/posts#post-${dayPosts[0].id}`}>
                 {cell}
               </a>
             ) : (

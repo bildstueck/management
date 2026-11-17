@@ -71,6 +71,12 @@ export async function updateWorkspaceColor(workspaceId: string, color: string) {
   await prisma.workspace.update({ where: { id: workspaceId }, data: { color } });
 }
 
+export async function updateWorkspaceName(workspaceId: string, name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Name darf nicht leer sein.");
+  await prisma.workspace.update({ where: { id: workspaceId }, data: { name: trimmed } });
+}
+
 export async function deleteWorkspace(workspaceId: string) {
   await prisma.workspace.delete({ where: { id: workspaceId } });
 }

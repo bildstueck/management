@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { WorkspaceNameForm } from "@/components/workspace-name-form";
 import { WorkspaceColorPicker } from "@/components/workspace-color-picker";
 import { DeleteWorkspaceButton } from "@/components/delete-workspace-button";
 
@@ -19,6 +20,18 @@ export default async function WorkspaceSettingsPage({
         <h1 className="text-2xl font-semibold">Einstellungen</h1>
         <p className="text-muted-foreground">Für diesen Workspace, nur für Owner sichtbar.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Name</CardTitle>
+          <CardDescription>
+            Erscheint im Dashboard, im Switcher und als &bdquo;Firma&ldquo; auf der Freigabeseite des Kunden.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <WorkspaceNameForm slug={slug} name={workspace.name} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

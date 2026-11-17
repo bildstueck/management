@@ -87,6 +87,7 @@ export async function approveReviewPostAction(token: string, postId: string, nam
   const result = await approvePost(link.workspaceId, postId, { name: authorName });
   revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
   revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  revalidatePath(`/review/${token}`, "layout");
   return result;
 }
 
@@ -111,6 +112,7 @@ export async function rejectReviewPostAction(
   );
   revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
   revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  revalidatePath(`/review/${token}`, "layout");
   return result;
 }
 
@@ -129,6 +131,7 @@ export async function editReviewPostTextAction(
   await updatePostTextByReviewer(link.workspaceId, postId, newText, authorName);
   revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
   revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  revalidatePath(`/review/${token}`, "layout");
 }
 
 // Lets a client submit their own photos/videos through the link — these
