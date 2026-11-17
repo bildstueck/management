@@ -13,18 +13,40 @@ import { PLATFORM_META } from "@/components/platform-meta";
 import { FacebookPreview } from "@/components/previews/facebook-preview";
 import { InstagramPreview } from "@/components/previews/instagram-preview";
 import { LinkedInPreview } from "@/components/previews/linkedin-preview";
+import { ContentPreview } from "@/components/previews/content-preview";
 import type { PreviewMedia } from "@/components/previews/types";
 import { ReviewComments, type ReviewCommentItem } from "@/components/review/review-comments";
-import { approveReviewPostAction, editReviewPostTextAction } from "@/app/review/[token]/actions";
+import {
+  approveReviewPostAction,
+  rejectReviewPostAction,
+  editReviewPostTextAction,
+} from "@/app/review/[token]/actions";
 
 const STATUS_LABELS: Record<PostStatus, string> = {
   DRAFT: "Entwurf",
-  PENDING_APPROVAL: "Wartet auf Freigabe",
+  PENDING_APPROVAL: "Wartet auf deine Freigabe",
   APPROVED: "Freigegeben",
   SCHEDULED: "Geplant",
   PUBLISHED: "Veröffentlicht",
   FAILED: "Fehlgeschlagen",
 };
+
+const STATUS_VARIANTS: Record<PostStatus, "default" | "secondary" | "destructive"> = {
+  DRAFT: "secondary",
+  PENDING_APPROVAL: "secondary",
+  APPROVED: "default",
+  SCHEDULED: "default",
+  PUBLISHED: "default",
+  FAILED: "destructive",
+};
+
+const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 type Channel = {
   id: string;
@@ -49,6 +71,8 @@ export function ReviewPostCard({
   postId,
   status,
   masterText,
+  masterMedia,
+  scheduledAt,
   channels,
   comments,
   history,
@@ -61,6 +85,8 @@ export function ReviewPostCard({
   postId: string;
   status: PostStatus;
   masterText: string;
+  masterMedia: PreviewMedia[];
+  scheduledAt: Date | null;
   channels: Channel[];
   comments: ReviewCommentItem[];
   history: HistoryEvent[];
@@ -71,7 +97,9 @@ export function ReviewPostCard({
 }) {
   const [currentStatus, setCurrentStatus] = useState(status);
   const [editing, setEditing] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [text, setText] = useState(masterText);
+  const [rejectReason, setRejectReason] = useState("");
   const [name, setName] = useState(reviewerName);
   const [showHistory, setShowHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -88,6 +116,20 @@ export function ReviewPostCard({
     });
   }
 
+  function reject() {
+    startTransition(async () => {
+      try {
+        await rejectReviewPostAction(token, postId, name, rejectReason);
+        setCurrentStatus("DRAFT");
+        setRejecting(false);
+        setRejectReason("");
+        toast.success("Beitrag abgelehnt — die Agentur wurde informiert.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Ablehnen fehlgeschlagen.");
+      }
+    });
+  }
+
   function saveEdit() {
     startTransition(async () => {
       try {
@@ -100,50 +142,101 @@ export function ReviewPostCard({
     });
   }
 
+  const pending = currentStatus === "PENDING_APPROVAL";
+
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4 py-4">
-        <div className="flex items-center justify-between">
-          <Badge variant={currentStatus === "APPROVED" ? "default" : "secondary"}>
-            {STATUS_LABELS[currentStatus]}
-          </Badge>
-          {canApprove && currentStatus === "PENDING_APPROVAL" && (
-            <Button type="button" size="sm" disabled={isPending} onClick={approve}>
-              Freigeben
-            </Button>
+    <Card className="gap-4 overflow-hidden rounded-2xl py-0 shadow-sm">
+      <CardContent className="flex flex-col gap-4 p-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
+          <div className="flex items-center gap-2">
+            <Badge variant={STATUS_VARIANTS[currentStatus]}>{STATUS_LABELS[currentStatus]}</Badge>
+            {scheduledAt && (
+              <span className="text-xs text-muted-foreground">
+                geplant für {dateFormatter.format(scheduledAt)}
+              </span>
+            )}
+          </div>
+          {canApprove && pending && !rejecting && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => setRejecting(true)}
+              >
+                Ablehnen
+              </Button>
+              <Button type="button" size="sm" disabled={isPending} onClick={approve}>
+                Freigeben
+              </Button>
+            </div>
           )}
         </div>
 
+        {canApprove && pending && rejecting && (
+          <div className="mx-5 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Was soll geändert werden? (optional)"
+              rows={2}
+            />
+            <div className="flex gap-2">
+              <Button type="button" size="sm" disabled={isPending} onClick={reject}>
+                Ablehnung senden
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setRejecting(false)}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className="px-5">
+          <ContentPreview text={masterText} media={masterMedia} />
+        </div>
+
         {channels.length > 0 && (
-          <Tabs defaultValue={channels[0].id}>
-            <TabsList>
-              {channels.map((channel) => (
-                <TabsTrigger key={channel.id} value={channel.id}>
-                  {PLATFORM_META[channel.platform].label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {channels.map((channel) => {
-              const props = {
-                accountName: channel.accountName,
-                avatarUrl: channel.avatarUrl,
-                text: channel.text ?? "",
-                media: channel.media,
-                mode: "mobile" as const,
-              };
-              return (
-                <TabsContent key={channel.id} value={channel.id} className="pt-4">
-                  {channel.platform === "FACEBOOK" && <FacebookPreview {...props} />}
-                  {channel.platform === "INSTAGRAM" && <InstagramPreview {...props} />}
-                  {channel.platform === "LINKEDIN" && <LinkedInPreview {...props} />}
-                </TabsContent>
-              );
-            })}
-          </Tabs>
+          <div className="px-5">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Vorschau pro Kanal
+            </p>
+            <Tabs defaultValue={channels[0].id}>
+              <TabsList>
+                {channels.map((channel) => (
+                  <TabsTrigger key={channel.id} value={channel.id}>
+                    {PLATFORM_META[channel.platform].label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {channels.map((channel) => {
+                const props = {
+                  accountName: channel.accountName,
+                  avatarUrl: channel.avatarUrl,
+                  text: channel.text ?? "",
+                  media: channel.media,
+                  mode: "mobile" as const,
+                };
+                return (
+                  <TabsContent key={channel.id} value={channel.id} className="pt-3">
+                    {channel.platform === "FACEBOOK" && <FacebookPreview {...props} />}
+                    {channel.platform === "INSTAGRAM" && <InstagramPreview {...props} />}
+                    {channel.platform === "LINKEDIN" && <LinkedInPreview {...props} />}
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
+          </div>
         )}
 
         {canEdit && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 px-5">
             {editing ? (
               <>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Dein Name" />
@@ -169,32 +262,34 @@ export function ReviewPostCard({
           </div>
         )}
 
-        <ReviewComments
-          token={token}
-          postId={postId}
-          canComment={canComment}
-          reviewerName={name}
-          initialComments={comments}
-        />
+        <div className="px-5 pb-5">
+          <ReviewComments
+            token={token}
+            postId={postId}
+            canComment={canComment}
+            reviewerName={name}
+            initialComments={comments}
+          />
 
-        {history.length > 0 && (
-          <div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowHistory((v) => !v)}>
-              Verlauf ({history.length})
-            </Button>
-            {showHistory && (
-              <ul className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
-                {history.map((event) => (
-                  <li key={event.id} className="whitespace-pre-wrap">
-                    {new Date(event.createdAt).toLocaleString("de-DE")} —{" "}
-                    {event.actorUser?.name ?? event.actorUser?.email ?? event.actorName ?? "System"}:{" "}
-                    {event.note ?? event.action}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+          {history.length > 0 && (
+            <div className="mt-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowHistory((v) => !v)}>
+                Verlauf ({history.length})
+              </Button>
+              {showHistory && (
+                <ul className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
+                  {history.map((event) => (
+                    <li key={event.id} className="whitespace-pre-wrap">
+                      {new Date(event.createdAt).toLocaleString("de-DE")} —{" "}
+                      {event.actorUser?.name ?? event.actorUser?.email ?? event.actorName ?? "System"}:{" "}
+                      {event.note ?? event.action}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

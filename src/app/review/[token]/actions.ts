@@ -2,7 +2,7 @@
 
 import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links";
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
-import { approvePost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
+import { approvePost, rejectPost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
 import { createMedia } from "@/lib/media";
 import {
@@ -84,6 +84,27 @@ export async function approveReviewPostAction(token: string, postId: string, nam
   const authorName = name.trim() || "Kunde";
   await setReviewerName(authorName);
   return approvePost(link.workspaceId, postId, { name: authorName });
+}
+
+export async function rejectReviewPostAction(
+  token: string,
+  postId: string,
+  name: string,
+  reason: string,
+) {
+  const link = await requireLink(token);
+  if (!link.canApprove) throw new ShareLinkError("Ablehnen ist für diesen Link nicht erlaubt.");
+  await requirePostInWorkspace(link.workspaceId, postId);
+
+  const authorName = name.trim() || "Kunde";
+  await setReviewerName(authorName);
+  const trimmedReason = reason.trim();
+  return rejectPost(
+    link.workspaceId,
+    postId,
+    { name: authorName },
+    trimmedReason ? `Abgelehnt: ${trimmedReason}` : "Abgelehnt",
+  );
 }
 
 export async function editReviewPostTextAction(

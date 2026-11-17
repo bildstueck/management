@@ -95,6 +95,12 @@ export default async function FeedPage({
         <div className="flex flex-col gap-2">
           {posts.map((post) => {
             const latestJob = post.publishJobs[0];
+            const lastEvent = post.approvalEvents[post.approvalEvents.length - 1];
+            const rejectionNote =
+              post.status === "DRAFT" && lastEvent?.toStatus === "DRAFT" && lastEvent?.note
+                ? lastEvent.note
+                : null;
+            const hasChannels = post.channelVariants.length > 0;
             return (
               <Card key={post.id} className="shadow-none">
                 <CardContent className="flex flex-col gap-3 py-3.5">
@@ -132,6 +138,11 @@ export default async function FeedPage({
                       {post.status === "FAILED" && latestJob?.errorMessage && (
                         <p className="mt-1 text-xs text-destructive">{latestJob.errorMessage}</p>
                       )}
+                      {rejectionNote && (
+                        <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                          Vom Kunden abgelehnt: {rejectionNote.replace(/^Abgelehnt:\s*/, "") || "ohne Grund"}
+                        </p>
+                      )}
                     </Link>
                     <div className="flex items-center gap-1">
                       {post.status === "DRAFT" && (
@@ -152,7 +163,7 @@ export default async function FeedPage({
                           </Button>
                         </form>
                       )}
-                      {(post.status === "APPROVED" || post.status === "FAILED") && (
+                      {hasChannels && (post.status === "APPROVED" || post.status === "FAILED") && (
                         <>
                           {post.scheduledAt && isFutureDate(post.scheduledAt) && (
                             <form action={schedulePostAction}>

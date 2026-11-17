@@ -247,6 +247,15 @@ export function approvePost(workspaceId: string, postId: string, actor: Actor) {
   return transitionStatus(workspaceId, postId, ["PENDING_APPROVAL"], "APPROVED", actor);
 }
 
+// Client (via share link): send a post back to Entwurf with an optional
+// reason, so the team sees it needs rework. Distinct from the team's own
+// revertToDraft below only in who can call it and that it always logs a
+// note — the Feed surfaces that note the same way it surfaces a FAILED
+// publish error.
+export function rejectPost(workspaceId: string, postId: string, actor: Actor, note?: string) {
+  return transitionStatus(workspaceId, postId, ["PENDING_APPROVAL"], "DRAFT", actor, note);
+}
+
 // Internal team: queue an approved (or previously failed) post for
 // publishing — immediately, or at its scheduledAt. The worker is what
 // actually waits, via a delayed BullMQ job; this just flips status + logs

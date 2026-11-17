@@ -15,6 +15,7 @@ import { PLATFORM_META } from "@/components/platform-meta";
 import { FacebookPreview } from "@/components/previews/facebook-preview";
 import { InstagramPreview } from "@/components/previews/instagram-preview";
 import { LinkedInPreview } from "@/components/previews/linkedin-preview";
+import { ContentPreview } from "@/components/previews/content-preview";
 import {
   requestMediaUploadAction,
   confirmMediaUploadAction,
@@ -271,12 +272,13 @@ export function PostComposer({
 
         <Card>
           <CardHeader>
-            <CardTitle>Kanäle</CardTitle>
+            <CardTitle>Kanäle (optional)</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {accounts.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Noch keine Social Accounts verbunden — siehe Accounts-Tab.
+                Noch keine Social Accounts verbunden — nicht nötig, um Beiträge zu planen und von
+                Kunden freigeben zu lassen. Nur für automatisches Veröffentlichen erforderlich.
               </p>
             )}
             {accounts.map((account) => {
@@ -367,11 +369,7 @@ export function PostComposer({
               className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs"
             />
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || selectedAccountIds.length === 0}
-            className="mt-5"
-          >
+          <Button onClick={handleSave} disabled={isSaving} className="mt-5">
             {isSaving ? "Wird gespeichert…" : "Entwurf speichern"}
           </Button>
         </div>
@@ -380,28 +378,30 @@ export function PostComposer({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">Vorschau</h2>
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={previewMode === "mobile" ? "default" : "outline"}
-              onClick={() => setPreviewMode("mobile")}
-            >
-              Mobile
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={previewMode === "desktop" ? "default" : "outline"}
-              onClick={() => setPreviewMode("desktop")}
-            >
-              Desktop
-            </Button>
-          </div>
+          {selectedAccounts.length > 0 && (
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={previewMode === "mobile" ? "default" : "outline"}
+                onClick={() => setPreviewMode("mobile")}
+              >
+                Mobile
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={previewMode === "desktop" ? "default" : "outline"}
+                onClick={() => setPreviewMode("desktop")}
+              >
+                Desktop
+              </Button>
+            </div>
+          )}
         </div>
 
         {selectedAccounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Wähle links einen Kanal aus.</p>
+          <ContentPreview text={masterText} media={resolveMedia(masterMediaIds)} />
         ) : (
           <Tabs
             value={activePreviewId ?? selectedAccounts[0].id}
