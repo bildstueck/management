@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { MessageSquare } from "lucide-react";
 import type { Platform, PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,6 +103,8 @@ export function ReviewPostCard({
   const [rejectReason, setRejectReason] = useState("");
   const [name, setName] = useState(reviewerName);
   const [showHistory, setShowHistory] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(comments.length);
   const [isPending, startTransition] = useTransition();
 
   function approve() {
@@ -143,9 +146,10 @@ export function ReviewPostCard({
   }
 
   const pending = currentStatus === "PENDING_APPROVAL";
+  const showComment = canComment || commentCount > 0;
 
   return (
-    <Card className="gap-4 overflow-hidden rounded-2xl py-0 shadow-sm">
+    <Card id={`post-${postId}`} className="scroll-mt-20 gap-4 overflow-hidden rounded-2xl py-0 shadow-sm">
       <CardContent className="flex flex-col gap-4 p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
           <div className="flex items-center gap-2">
@@ -156,20 +160,35 @@ export function ReviewPostCard({
               </span>
             )}
           </div>
-          {canApprove && pending && !rejecting && (
+          {!rejecting && (
             <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isPending}
-                onClick={() => setRejecting(true)}
-              >
-                Ablehnen
-              </Button>
-              <Button type="button" size="sm" disabled={isPending} onClick={approve}>
-                Freigeben
-              </Button>
+              {showComment && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCommentsOpen((v) => !v)}
+                >
+                  <MessageSquare className="size-3.5" />
+                  {commentCount > 0 ? `Kommentare (${commentCount})` : "Kommentieren"}
+                </Button>
+              )}
+              {canApprove && pending && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => setRejecting(true)}
+                  >
+                    Ablehnen
+                  </Button>
+                  <Button type="button" size="sm" disabled={isPending} onClick={approve}>
+                    Freigeben
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -264,11 +283,13 @@ export function ReviewPostCard({
 
         <div className="px-5 pb-5">
           <ReviewComments
+            open={commentsOpen}
             token={token}
             postId={postId}
             canComment={canComment}
             reviewerName={name}
             initialComments={comments}
+            onCommentsChange={(next) => setCommentCount(next.length)}
           />
 
           {history.length > 0 && (

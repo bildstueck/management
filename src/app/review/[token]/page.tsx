@@ -1,19 +1,24 @@
 import Image from "next/image";
 import { getShareLinkByToken } from "@/lib/share-links";
 import { isShareLinkUnlocked, getReviewerName } from "@/lib/share-link-session";
-import { listReviewablePosts } from "@/lib/posts";
+import { listReviewablePosts, listReviewablePostsInRange } from "@/lib/posts";
 import { listMedia } from "@/lib/media";
+import { getMonthGrid } from "@/lib/calendar-dates";
 import { PasswordGate } from "@/components/review/password-gate";
 import { ReviewPostCard } from "@/components/review/review-post-card";
 import { ReviewUpload } from "@/components/review/review-upload";
+import { ReviewCalendar } from "@/components/review/review-calendar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ReviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const { token } = await params;
+  const { month } = await searchParams;
   const link = await getShareLinkByToken(token);
 
   if (!link) {
@@ -45,10 +50,19 @@ export default async function ReviewPage({
     return <PasswordGate token={token} />;
   }
 
-  const [posts, media, reviewerName] = await Promise.all([
+  const now = new Date();
+  const [yearStr, monthStr] = (
+    month ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  ).split("-");
+  const year = Number(yearStr) || now.getFullYear();
+  const monthIndex = (Number(monthStr) || now.getMonth() + 1) - 1;
+  const grid = getMonthGrid(year, monthIndex);
+
+  const [posts, media, reviewerName, calendarPosts] = await Promise.all([
     listReviewablePosts(link.workspaceId),
     listMedia(link.workspaceId),
     getReviewerName(),
+    listReviewablePostsInRange(link.workspaceId, grid.gridStart, grid.gridEnd),
   ]);
   const mediaById = new Map(media.map((m) => [m.id, m]));
   const pending = posts.filter((p) => p.status === "PENDING_APPROVAL");
@@ -117,6 +131,15 @@ export default async function ReviewPage({
         </div>
 
         {link.canUpload && <ReviewUpload token={token} />}
+
+        <ReviewCalendar
+          key={`${year}-${monthIndex}`}
+          token={token}
+          year={year}
+          monthIndex={monthIndex}
+          days={grid.days}
+          posts={calendarPosts}
+        />
 
         {posts.length === 0 ? (
           <Card>

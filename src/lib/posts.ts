@@ -54,6 +54,21 @@ export function listPostsInRange(workspaceId: string, from: Date, to: Date) {
   });
 }
 
+// For the client review page's calendar — both upcoming and already-past
+// reviewable posts in the given month, so the client gets a full overview
+// (not just what's still pending).
+export function listReviewablePostsInRange(workspaceId: string, from: Date, to: Date) {
+  return prisma.post.findMany({
+    where: {
+      workspaceId,
+      status: { in: REVIEWABLE_STATUSES },
+      scheduledAt: { gte: from, lt: to },
+    },
+    orderBy: { scheduledAt: "asc" },
+    select: { id: true, scheduledAt: true },
+  });
+}
+
 export function listUnscheduledPosts(workspaceId: string) {
   return prisma.post.findMany({
     where: { workspaceId, scheduledAt: null },

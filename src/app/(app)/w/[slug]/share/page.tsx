@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { listShareLinks } from "@/lib/share-links";
@@ -24,11 +25,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Einladungslinks</h1>
-        <p className="text-muted-foreground">
-          Lade Kunden ohne Account zu diesem Workspace ein. Sie sehen Beiträge, die bereits
-          &bdquo;Zur Freigabe&rdquo; eingereicht wurden, können kommentieren, freigeben und eigene
-          Medien hochladen.
-        </p>
+        <p className="text-muted-foreground">Links für Kunden, ohne Account.</p>
       </div>
 
       <Card className="max-w-2xl">
@@ -63,13 +60,19 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
                     {link.canUpload && <Badge variant="secondary">Medien-Upload</Badge>}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <CopyButton value={url} />
                   <form action={deleteShareLinkAction}>
                     <input type="hidden" name="slug" value={slug} />
                     <input type="hidden" name="id" value={link.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Löschen
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Link löschen"
+                      title="Link löschen"
+                    >
+                      <X className="size-4" />
                     </Button>
                   </form>
                 </div>

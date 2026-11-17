@@ -18,10 +18,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Mitglieder</h1>
-        <p className="text-muted-foreground">
-          Team-Accounts, die Zugriff auf diesen Workspace haben. Neue Team-Accounts werden derzeit
-          direkt in der Datenbank angelegt (`npm run db:seed` / Prisma Studio).
-        </p>
+        <p className="text-muted-foreground">Team-Zugriff auf diesen Workspace.</p>
       </div>
 
       {canManage && (

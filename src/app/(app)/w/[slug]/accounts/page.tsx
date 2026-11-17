@@ -87,9 +87,7 @@ export default async function AccountsPage({
           <CardHeader>
             <CardTitle>Noch keine Accounts verbunden</CardTitle>
             <CardDescription>
-              {canManage
-                ? "Verbinde oben einen Facebook-, Instagram- oder LinkedIn-Account."
-                : "Nur Owner können Accounts verbinden."}
+              {canManage ? "Oben verbinden." : "Nur Owner können Accounts verbinden."}
             </CardDescription>
           </CardHeader>
         </Card>
