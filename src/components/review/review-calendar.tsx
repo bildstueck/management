@@ -68,7 +68,7 @@ export function ReviewCalendar({
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="py-2 text-center text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+              className="py-1 text-center text-[10px] font-semibold tracking-wide text-muted-foreground uppercase"
             >
               {label}
             </div>
@@ -83,12 +83,12 @@ export function ReviewCalendar({
 
             const cell = (
               <div
-                className={`flex h-20 flex-col items-center justify-center gap-1.5 border-r border-b last:border-r-0 ${
+                className={`flex h-11 flex-col items-center justify-center gap-0.5 border-r border-b last:border-r-0 ${
                   inMonth ? "bg-background" : "bg-muted/10"
                 } ${dayPosts.length > 0 ? "hover:bg-muted/40" : ""}`}
               >
                 <span
-                  className={`flex size-7 items-center justify-center rounded-full text-sm ${
+                  className={`flex size-5 items-center justify-center rounded-full text-xs ${
                     isToday
                       ? "bg-destructive font-semibold text-white"
                       : inMonth
@@ -99,7 +99,7 @@ export function ReviewCalendar({
                   {day.getDate()}
                 </span>
                 <span
-                  className={`size-2 rounded-full ${dayPosts.length > 0 ? "bg-primary" : "bg-transparent"}`}
+                  className={`size-1.5 rounded-full ${dayPosts.length > 0 ? "bg-primary" : "bg-transparent"}`}
                 />
               </div>
             );

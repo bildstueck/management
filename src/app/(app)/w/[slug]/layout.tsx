@@ -12,16 +12,22 @@ export default async function WorkspaceLayout({
 }) {
   const { slug } = await params;
   const user = await requireUser();
-  const workspace = await requireWorkspaceMember(slug, user.id);
-  const workspaces = await getWorkspacesForUser(user.id);
+  const [workspace, workspaces] = await Promise.all([
+    requireWorkspaceMember(slug, user.id),
+    getWorkspacesForUser(user.id),
+  ]);
 
   return (
-    <div className="flex flex-1 flex-col -m-6">
-      <div className="flex items-center gap-3 px-6 py-3">
+    <div className="flex flex-1 flex-col -m-6 lg:flex-row">
+      <div className="flex flex-col gap-2 border-b p-3 lg:hidden">
         <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
+        <WorkspaceNav slug={slug} isOwner={workspace.role === "OWNER"} variant="mobile" />
       </div>
-      <WorkspaceNav slug={slug} isOwner={workspace.role === "OWNER"} />
-      <div className="flex-1 p-6">{children}</div>
+      <aside className="hidden w-56 shrink-0 flex-col gap-4 border-r p-4 lg:flex">
+        <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
+        <WorkspaceNav slug={slug} isOwner={workspace.role === "OWNER"} />
+      </aside>
+      <div className="min-w-0 flex-1 overflow-x-hidden p-4 lg:p-6">{children}</div>
     </div>
   );
 }

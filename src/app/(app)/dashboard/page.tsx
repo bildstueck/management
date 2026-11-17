@@ -33,7 +33,13 @@ export default async function DashboardPage() {
             <Link key={workspace.id} href={`/w/${workspace.slug}`}>
               <Card className="transition-colors hover:border-primary">
                 <CardHeader>
-                  <CardTitle>{workspace.name}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: workspace.color }}
+                    />
+                    {workspace.name}
+                  </CardTitle>
                 </CardHeader>
               </Card>
             </Link>

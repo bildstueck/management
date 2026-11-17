@@ -4,8 +4,15 @@ import { listSocialAccounts } from "@/lib/social-accounts";
 import { listMedia } from "@/lib/media";
 import { PostComposer } from "@/components/post-composer";
 
-export default async function NewPostPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function NewPostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ date?: string }>;
+}) {
   const { slug } = await params;
+  const { date } = await searchParams;
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   const [accounts, media] = await Promise.all([
@@ -21,6 +28,7 @@ export default async function NewPostPage({ params }: { params: Promise<{ slug: 
         accounts={accounts}
         initialMedia={media.map((m) => ({ id: m.id, type: m.type, url: m.url }))}
         initialPost={null}
+        initialDate={date ?? null}
       />
     </div>
   );

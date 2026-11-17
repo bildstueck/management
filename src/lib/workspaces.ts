@@ -66,3 +66,11 @@ export async function requireWorkspaceRole(
   if (!roles.includes(workspace.role)) notFound();
   return workspace;
 }
+
+export async function updateWorkspaceColor(workspaceId: string, color: string) {
+  await prisma.workspace.update({ where: { id: workspaceId }, data: { color } });
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+  await prisma.workspace.delete({ where: { id: workspaceId } });
+}

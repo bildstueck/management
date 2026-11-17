@@ -61,11 +61,13 @@ export function PostComposer({
   accounts,
   initialMedia,
   initialPost,
+  initialDate,
 }: {
   slug: string;
   accounts: AccountOption[];
   initialMedia: MediaOption[];
   initialPost: InitialPost | null;
+  initialDate?: string | null;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +77,9 @@ export function PostComposer({
   const [masterMediaIds, setMasterMediaIds] = useState<string[]>(
     initialPost?.masterMediaIds ?? [],
   );
-  const [scheduledAt, setScheduledAt] = useState(initialPost?.scheduledAt ?? "");
+  const [scheduledAt, setScheduledAt] = useState(
+    initialPost?.scheduledAt ?? initialDate ?? "",
+  );
   const [mediaLibrary, setMediaLibrary] = useState<MediaOption[]>(initialMedia);
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(
     initialPost?.channels.map((c) => c.socialAccountId) ?? [],

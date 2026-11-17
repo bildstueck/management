@@ -82,9 +82,9 @@ export function MiniCalendar({
 
             const cell = (
               <div
-                className={`flex h-20 flex-col items-center justify-center gap-1.5 border-r border-b last:border-r-0 ${
+                className={`flex h-16 flex-col items-center justify-center gap-1 border-r border-b last:border-r-0 ${
                   inMonth ? "bg-background" : "bg-muted/10"
-                } ${dayPosts.length > 0 ? "hover:bg-muted/40" : ""}`}
+                } hover:bg-muted/40`}
               >
                 <span
                   className={`flex size-7 items-center justify-center rounded-full text-sm ${
@@ -103,12 +103,17 @@ export function MiniCalendar({
               </div>
             );
 
-            return dayPosts.length > 0 ? (
-              <Link key={dateKey} href={`/w/${slug}/posts/${dayPosts[0].id}`}>
+            return (
+              <Link
+                key={dateKey}
+                href={
+                  dayPosts.length > 0
+                    ? `/w/${slug}/posts/${dayPosts[0].id}`
+                    : `/w/${slug}/posts/new?date=${dateKey}`
+                }
+              >
                 {cell}
               </Link>
-            ) : (
-              <div key={dateKey}>{cell}</div>
             );
           })}
         </div>

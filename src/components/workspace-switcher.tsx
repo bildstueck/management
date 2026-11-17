@@ -11,7 +11,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type WorkspaceSummary = { slug: string; name: string };
+type WorkspaceSummary = { slug: string; name: string; color?: string };
+
+function ColorDot({ color }: { color?: string }) {
+  return (
+    <span
+      className="size-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: color || "#6366f1" }}
+    />
+  );
+}
 
 export function WorkspaceSwitcher({
   current,
@@ -22,13 +31,19 @@ export function WorkspaceSwitcher({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1" />}>
-        {current.name}
-        <ChevronsUpDown className="size-3.5 opacity-60" />
+      <DropdownMenuTrigger
+        render={<Button variant="outline" size="sm" className="w-full justify-between gap-1" />}
+      >
+        <span className="flex items-center gap-2 truncate">
+          <ColorDot color={current.color} />
+          {current.name}
+        </span>
+        <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {workspaces.map((workspace) => (
           <DropdownMenuItem key={workspace.slug} render={<Link href={`/w/${workspace.slug}`} />}>
+            <ColorDot color={workspace.color} />
             {workspace.name}
           </DropdownMenuItem>
         ))}

@@ -106,7 +106,7 @@ export default async function ReviewPage({
     );
   }
 
-  const greeting = link.recipientName ? `Hallo ${link.recipientName}` : link.workspace.name;
+  const greeting = link.recipientName ? `Hallo ${link.recipientName}` : "Hallo!";
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -120,14 +120,16 @@ export default async function ReviewPage({
           className="h-6 w-auto"
         />
         {link.recipientName && (
-          <span className="text-sm text-muted-foreground">{link.recipientName}</span>
+          <span className="ml-3 truncate text-sm text-muted-foreground">{link.recipientName}</span>
         )}
       </header>
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
         <div>
           <h1 className="text-2xl font-semibold">{greeting}</h1>
-          <p className="text-muted-foreground">Beiträge zur Freigabe.</p>
+          <p className="text-muted-foreground">
+            Verwalte hier alle Beiträge für die {link.workspace.name}.
+          </p>
         </div>
 
         {others.length > 0 && (

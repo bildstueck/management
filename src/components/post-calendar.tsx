@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import type { Platform } from "@prisma/client";
@@ -77,6 +78,7 @@ export function PostCalendar({
   const [unscheduled, setUnscheduled] = useState(unscheduledPosts);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const router = useRouter();
 
   function movePost(postId: string, toDateKeyValue: string | null) {
     let moved: PostLite | undefined;
@@ -203,9 +205,14 @@ export function PostCalendar({
                 key={dateKey}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, dateKey)}
+                onClick={() => {
+                  if (posts.length === 0) router.push(`/w/${slug}/posts/new?date=${dateKey}`);
+                }}
                 className={`flex min-h-24 flex-col gap-1 border-r border-b p-1.5 last:border-r-0 ${
                   i % 7 === 6 ? "border-r-0" : ""
-                } ${inMonth ? "bg-background" : "bg-muted/10"}`}
+                } ${inMonth ? "bg-background" : "bg-muted/10"} ${
+                  posts.length === 0 ? "cursor-pointer hover:bg-muted/30" : ""
+                }`}
               >
                 <span
                   className={`flex size-5 items-center justify-center rounded-full text-xs ${

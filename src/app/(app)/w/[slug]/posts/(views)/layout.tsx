@@ -21,7 +21,7 @@ export default async function PostsViewsLayout({
   return (
     <div className="flex flex-col gap-4">
       <ChannelsStrip slug={slug} accounts={accounts} />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <PostsViewTabs slug={slug} />
         <Button render={<Link href={`/w/${slug}/posts/new`} />}>Neuer Beitrag</Button>
       </div>

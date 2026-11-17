@@ -60,7 +60,7 @@ export function CreateShareLinkForm({ slug }: { slug: string }) {
           <Checkbox name="canApprove" defaultChecked /> Freigeben erlauben
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="canEdit" /> Text bearbeiten erlauben
+          <Checkbox name="canEdit" defaultChecked /> Text bearbeiten erlauben
         </label>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="canUpload" defaultChecked /> Medien hochladen erlauben
