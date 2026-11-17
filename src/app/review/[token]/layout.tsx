@@ -66,7 +66,7 @@ export default async function ReviewLayout({
         <aside className="hidden w-56 shrink-0 flex-col gap-1 border-r p-4 lg:flex">
           <ReviewNav token={token} />
         </aside>
-        <main className="mx-auto min-w-0 w-full max-w-4xl flex-1 overflow-x-hidden p-4 lg:p-6">
+        <main className="mx-auto min-w-0 w-full max-w-xl flex-1 overflow-x-hidden p-4 lg:p-6">
           {children}
         </main>
       </div>
