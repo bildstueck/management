@@ -66,6 +66,34 @@ export async function reschedulePost(workspaceId: string, postId: string, schedu
   await prisma.post.updateMany({ where: { id: postId, workspaceId }, data: { scheduledAt } });
 }
 
+// Lightweight post rows for the workspace overview's status columns (Wartet
+// auf Freigabe / Freigegeben / Anstehend) — no comments/history/publish-job
+// includes needed there, just enough to render a compact list.
+export function listPostsByStatus(workspaceId: string, statuses: PostStatus[]) {
+  return prisma.post.findMany({
+    where: { workspaceId, status: { in: statuses } },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+// "What the client did at approval time" for the overview's notification
+// list — actorUserId is null exactly when an ApprovalEvent was triggered via
+// the public review link (approve/reject), never by an internal team
+// action, so this filter alone separates client activity from the team's
+// own status changes without needing a separate "source" column.
+export function listRecentClientActivity(workspaceId: string, limit = 8) {
+  return prisma.approvalEvent.findMany({
+    where: {
+      post: { workspaceId },
+      actorUserId: null,
+      toStatus: { in: ["APPROVED", "DRAFT"] },
+    },
+    include: { post: { select: { id: true, masterText: true } } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
 // For the Instagram grid preview: all IG channel variants in the workspace,
 // most-recently-scheduled first. Posts without a scheduledAt have no defined
 // position yet, so they sort to the end rather than relying on the

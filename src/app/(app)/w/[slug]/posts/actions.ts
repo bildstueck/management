@@ -118,10 +118,7 @@ export async function savePostAction(slug: string, input: z.infer<typeof SavePos
   return { id: post.id };
 }
 
-export async function deletePostAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function deletePostAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await deletePost(workspace.id, postId);
@@ -169,20 +166,14 @@ export async function toggleCommentResolvedAction(
   revalidatePosts(slug, postId);
 }
 
-export async function submitForApprovalAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function submitForApprovalAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await submitForApproval(workspace.id, postId, user.id);
   revalidatePosts(slug, postId);
 }
 
-export async function revertToDraftAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function revertToDraftAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await revertToDraft(workspace.id, postId, user.id);
@@ -193,10 +184,7 @@ export async function revertToDraftAction(formData: FormData) {
 // scheduledAt is already due (or unset), the GitHub Actions-triggered
 // /api/cron/publish route picks it up within a few minutes; schedulePostAction
 // itself doesn't wait for that.
-export async function schedulePostAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function schedulePostAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await scheduleForPublish(workspace.id, postId, user.id);
@@ -205,10 +193,7 @@ export async function schedulePostAction(formData: FormData) {
 
 // Same status transition as schedulePostAction, but publishes right away in
 // this same request instead of waiting for the cron route.
-export async function publishNowAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function publishNowAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
 
@@ -217,10 +202,7 @@ export async function publishNowAction(formData: FormData) {
   revalidatePosts(slug, postId);
 }
 
-export async function cancelScheduleAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const postId = formData.get("postId") as string;
-
+export async function cancelScheduleAction(slug: string, postId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceMember(slug, user.id);
   await cancelSchedule(workspace.id, postId, user.id);
