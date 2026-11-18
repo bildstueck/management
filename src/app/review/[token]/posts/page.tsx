@@ -24,7 +24,7 @@ export default async function ReviewPostsPage({
   const others = posts.filter((p) => p.status !== "PENDING_APPROVAL");
   const { canApprove, canEdit, canComment } = link;
 
-  function renderCard(post: (typeof posts)[number]) {
+  function renderCard(post: (typeof posts)[number], compact = false) {
     return (
       <ReviewPostCard
         key={post.id}
@@ -43,6 +43,8 @@ export default async function ReviewPostsPage({
         reviewerName={reviewerName}
         comments={post.comments}
         history={post.approvalEvents}
+        compact={compact}
+        approvedAt={compact ? post.updatedAt : undefined}
         channels={post.channelVariants.map((variant) => {
           const mediaIds = variant.mediaIds.length > 0 ? variant.mediaIds : post.masterMediaIds;
           return {
@@ -82,17 +84,17 @@ export default async function ReviewPostsPage({
                 Wartet auf deine Freigabe ({pending.length})
               </h2>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {pending.map(renderCard)}
+                {pending.map((post) => renderCard(post))}
               </div>
             </div>
           )}
           {others.length > 0 && (
             <div className="flex flex-col gap-3">
-              {pending.length > 0 && (
-                <h2 className="text-sm font-semibold text-muted-foreground">Weitere Beiträge</h2>
-              )}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {others.map(renderCard)}
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                Bereits freigegeben ({others.length})
+              </h2>
+              <div className="flex max-w-xl flex-col gap-3">
+                {others.map((post) => renderCard(post, true))}
               </div>
             </div>
           )}

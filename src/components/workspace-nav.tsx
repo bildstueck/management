@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Rows3, Share2, Plug, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Rows3, Images, Share2, Plug, Users, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function WorkspaceNav({
@@ -19,6 +19,7 @@ export function WorkspaceNav({
   const tabs = [
     { href: base, label: "Übersicht", icon: LayoutDashboard },
     { href: `${base}/posts`, label: "Beiträge", icon: Rows3 },
+    { href: `${base}/media`, label: "Material", icon: Images },
     ...(isOwner ? [{ href: `${base}/share`, label: "Freigabe", icon: Share2 }] : []),
     { href: `${base}/accounts`, label: "Accounts", icon: Plug },
     { href: `${base}/members`, label: "Mitglieder", icon: Users },

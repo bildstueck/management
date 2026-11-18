@@ -67,12 +67,12 @@ export function ReviewUpload({ token }: { token: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Material hochladen</CardTitle>
-        <CardDescription>Fotos oder Videos direkt hochladen.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Card className="gap-3 py-4">
+      <CardHeader className="flex items-center justify-between gap-3">
+        <div>
+          <CardTitle className="text-sm">Material hochladen</CardTitle>
+          <CardDescription className="text-xs">Fotos oder Videos direkt hochladen.</CardDescription>
+        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -84,44 +84,44 @@ export function ReviewUpload({ token }: { token: string }) {
         <Button
           type="button"
           variant="outline"
+          size="sm"
           disabled={uploading}
           onClick={() => fileInputRef.current?.click()}
-          className="self-start"
+          className="shrink-0"
         >
-          <Upload className="size-4" />
-          {uploading ? "Wird hochgeladen…" : "Dateien auswählen"}
+          <Upload className="size-3.5" />
+          {uploading ? "Lädt…" : "Hochladen"}
         </Button>
-
-        {uploaded.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {uploaded.map((item) => (
-              <div
-                key={item.id}
-                className="relative size-16 overflow-hidden rounded-md border bg-muted"
+      </CardHeader>
+      {uploaded.length > 0 && (
+        <CardContent className="flex flex-wrap gap-2">
+          {uploaded.map((item) => (
+            <div
+              key={item.id}
+              className="relative size-16 overflow-hidden rounded-md border bg-muted"
+            >
+              {item.type === "IMAGE" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                  Video
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDelete(item.id)}
+                disabled={deletingId === item.id}
+                aria-label="Löschen"
+                title="Löschen"
+                className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-destructive"
               >
-                {item.type === "IMAGE" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                    Video
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item.id)}
-                  disabled={deletingId === item.id}
-                  aria-label="Löschen"
-                  title="Löschen"
-                  className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-destructive"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </CardContent>
+      )}
     </Card>
   );
 }

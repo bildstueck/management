@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import type { Platform, PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import { LinkedInPreview } from "@/components/previews/linkedin-preview";
 import { ContentPreview } from "@/components/previews/content-preview";
 import type { PreviewMedia } from "@/components/previews/types";
 import { ReviewComments, type ReviewCommentItem } from "@/components/review/review-comments";
+import { relativeTime } from "@/lib/relative-time";
 import {
   approveReviewPostAction,
   rejectReviewPostAction,
@@ -81,6 +82,8 @@ export function ReviewPostCard({
   canEdit,
   canComment,
   reviewerName,
+  compact = false,
+  approvedAt,
 }: {
   token: string;
   postId: string;
@@ -95,6 +98,12 @@ export function ReviewPostCard({
   canEdit: boolean;
   canComment: boolean;
   reviewerName: string;
+  // Compact mode skips the media preview / channel tabs for an
+  // already-decided post — used in the "Bereits freigegeben" list, where a
+  // full image card per row felt cluttered. approvedAt (post.updatedAt at
+  // the time it was approved) drives the checkmark + relative time there.
+  compact?: boolean;
+  approvedAt?: Date | null;
 }) {
   const [currentStatus, setCurrentStatus] = useState(status);
   const [editing, setEditing] = useState(false);
@@ -150,11 +159,25 @@ export function ReviewPostCard({
   const showComment = canComment || commentCount > 0;
 
   return (
-    <Card id={`post-${postId}`} className="scroll-mt-20 gap-4 overflow-hidden rounded-2xl py-0 shadow-sm">
-      <CardContent className="flex flex-col gap-4 p-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
+    <Card
+      id={`post-${postId}`}
+      className={
+        compact
+          ? "scroll-mt-20 gap-3 rounded-xl py-4 shadow-sm"
+          : "scroll-mt-20 gap-4 overflow-hidden rounded-2xl py-0 shadow-sm"
+      }
+    >
+      <CardContent className={compact ? "flex flex-col gap-3 px-4" : "flex flex-col gap-4 p-0"}>
+        <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "" : "px-5 pt-5"}`}>
           <div className="flex items-center gap-2">
-            <Badge variant={STATUS_VARIANTS[currentStatus]}>{STATUS_LABELS[currentStatus]}</Badge>
+            {approvedAt ? (
+              <span className="flex items-center gap-1 text-xs font-medium text-primary">
+                <CheckCircle2 className="size-3.5" />
+                Freigegeben {relativeTime(approvedAt)}
+              </span>
+            ) : (
+              <Badge variant={STATUS_VARIANTS[currentStatus]}>{STATUS_LABELS[currentStatus]}</Badge>
+            )}
             {scheduledAt && (
               <span className="text-xs text-muted-foreground">
                 geplant für {dateFormatter.format(scheduledAt)}
@@ -195,7 +218,7 @@ export function ReviewPostCard({
         </div>
 
         {canApprove && pending && rejecting && (
-          <div className="mx-5 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+          <div className={`flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 ${compact ? "" : "mx-5"}`}>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -218,11 +241,17 @@ export function ReviewPostCard({
           </div>
         )}
 
-        <div className="px-5">
-          <ContentPreview text={masterText} media={masterMedia} compact />
-        </div>
+        {compact ? (
+          <p className="line-clamp-2 text-sm">
+            {masterText || <span className="text-muted-foreground italic">(kein Text)</span>}
+          </p>
+        ) : (
+          <div className="px-5">
+            <ContentPreview text={masterText} media={masterMedia} compact />
+          </div>
+        )}
 
-        {channels.length > 0 && (
+        {!compact && channels.length > 0 && (
           <div className="px-5">
             <Button
               type="button"
@@ -264,7 +293,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        {canEdit && (
+        {!compact && canEdit && (
           <div className="flex flex-col gap-2 px-5">
             {editing ? (
               <>
@@ -291,7 +320,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        <div className="px-5 pb-5">
+        <div className={compact ? "" : "px-5 pb-5"}>
           <ReviewComments
             open={commentsOpen}
             token={token}

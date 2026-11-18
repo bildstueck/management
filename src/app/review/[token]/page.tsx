@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, CheckCircle2 } from "lucide-react";
 import type { PostStatus } from "@prisma/client";
 import { getShareLinkByToken } from "@/lib/share-links";
 import { listPostsByStatus, listReviewablePostsInRange } from "@/lib/posts";
@@ -7,6 +7,7 @@ import { getMonthGrid } from "@/lib/calendar-dates";
 import { Badge } from "@/components/ui/badge";
 import { ReviewUpload } from "@/components/review/review-upload";
 import { ReviewCalendar } from "@/components/review/review-calendar";
+import { relativeTime } from "@/lib/relative-time";
 
 const STATUS_LABELS: Record<PostStatus, string> = {
   DRAFT: "Entwurf",
@@ -23,14 +24,24 @@ const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   year: "numeric",
 });
 
+type ListedPost = {
+  id: string;
+  masterText: string | null;
+  status: PostStatus;
+  scheduledAt: Date | null;
+  updatedAt: Date;
+};
+
 function PostList({
   token,
   posts,
   emptyLabel,
+  variant,
 }: {
   token: string;
-  posts: { id: string; masterText: string | null; status: PostStatus; scheduledAt: Date | null }[];
+  posts: ListedPost[];
   emptyLabel: string;
+  variant: "pending" | "approved";
 }) {
   if (posts.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
@@ -48,9 +59,16 @@ function PostList({
               {post.masterText || <span className="text-muted-foreground">(kein Text)</span>}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {STATUS_LABELS[post.status]}
-              </Badge>
+              {variant === "approved" ? (
+                <span className="flex items-center gap-1 text-xs text-primary">
+                  <CheckCircle2 className="size-3.5" />
+                  Freigegeben {relativeTime(post.updatedAt)}
+                </span>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  {STATUS_LABELS[post.status]}
+                </Badge>
+              )}
               {post.scheduledAt && (
                 <span className="text-xs text-muted-foreground">
                   {dateFormatter.format(post.scheduledAt)}
@@ -103,17 +121,34 @@ export default async function ReviewOverviewPage({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-3 rounded-xl border bg-background p-4">
-          <h2 className="text-sm font-semibold text-muted-foreground">
-            Wartet auf deine Freigabe ({pending.length})
+        <div
+          className={`flex flex-col gap-3 rounded-xl border p-4 ${
+            pending.length > 0 ? "border-primary/40 bg-primary/5" : "bg-background"
+          }`}
+        >
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            Wartet auf deine Freigabe
+            <Badge variant={pending.length > 0 ? "default" : "secondary"}>{pending.length}</Badge>
+            {pending.length > 0 && <span className="size-2 rounded-full bg-destructive" />}
           </h2>
-          <PostList token={token} posts={pending} emptyLabel="Nichts wartet gerade auf dich." />
+          <PostList
+            token={token}
+            posts={pending}
+            emptyLabel="Nichts wartet gerade auf dich."
+            variant="pending"
+          />
         </div>
         <div className="flex flex-col gap-3 rounded-xl border bg-background p-4">
-          <h2 className="text-sm font-semibold text-muted-foreground">
-            Bereits freigegeben ({approved.length})
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            Bereits freigegeben
+            <Badge variant="secondary">{approved.length}</Badge>
           </h2>
-          <PostList token={token} posts={approved} emptyLabel="Noch nichts freigegeben." />
+          <PostList
+            token={token}
+            posts={approved}
+            emptyLabel="Noch nichts freigegeben."
+            variant="approved"
+          />
         </div>
       </div>
 

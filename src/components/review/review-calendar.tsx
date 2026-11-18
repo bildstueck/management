@@ -63,6 +63,10 @@ export function ReviewCalendar({
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        Hier siehst du alle geplanten Beiträge (mit Punkt markiert).
+      </p>
+
       <div className="overflow-hidden rounded-xl border">
         <div className="grid grid-cols-7 border-b bg-muted/40">
           {WEEKDAY_LABELS.map((label) => (

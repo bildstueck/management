@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Rows3 } from "lucide-react";
+import { LayoutDashboard, Rows3, Images } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ReviewNav({
@@ -19,6 +19,7 @@ export function ReviewNav({
   const tabs = [
     { href: base, label: "Übersicht", icon: LayoutDashboard, dot: false },
     { href: `${base}/posts`, label: "Beiträge", icon: Rows3, dot: hasPending },
+    { href: `${base}/media`, label: "Material", icon: Images, dot: false },
   ];
 
   if (variant === "mobile") {
