@@ -219,7 +219,7 @@ export function ReviewPostCard({
         )}
 
         <div className="px-5">
-          <ContentPreview text={masterText} media={masterMedia} />
+          <ContentPreview text={masterText} media={masterMedia} compact />
         </div>
 
         {channels.length > 0 && (
