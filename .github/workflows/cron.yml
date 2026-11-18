@@ -5,14 +5,24 @@ name: Scheduled jobs
 # (src/app/api/cron/*). This exists only because Vercel's own free-tier cron
 # can run at most once a day, too coarse for "publish at a specific time".
 #
+# GitHub Actions itself does NOT reliably honor a 5-minute schedule — in
+# practice it fired only every few hours, far too coarse for on-time
+# publishing. The actual publish trigger is now an external pinger
+# (cron-job.org) calling /api/cron/publish every 5 minutes directly. The
+# "*/5" schedule below is kept only as a free backup in case that external
+# service ever lapses — treat its real-world frequency as "occasionally",
+# not "every 5 minutes". The daily refresh-tokens job is unaffected (GitHub
+# Actions honors daily schedules reliably) and stays the primary trigger
+# for that one.
+#
 # Needs two repo secrets (Settings -> Secrets and variables -> Actions):
 #   APP_URL      e.g. https://your-project.vercel.app
 #   CRON_SECRET  same value as the CRON_SECRET env var set in Vercel
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # publish: every 5 minutes
-    - cron: "17 4 * * *" # refresh-tokens: once daily
+    - cron: "*/5 * * * *" # publish: backup only, see note above
+    - cron: "17 4 * * *" # refresh-tokens: once daily, primary trigger
   workflow_dispatch: {} # lets you trigger either job manually from the Actions tab
 
 jobs:
