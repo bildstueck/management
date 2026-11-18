@@ -62,7 +62,7 @@ export default async function ReviewPostsPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex max-w-6xl flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Beiträge</h1>
         <p className="text-muted-foreground">Alle Beiträge, die zur Freigabe standen oder stehen.</p>
@@ -81,7 +81,9 @@ export default async function ReviewPostsPage({
               <h2 className="text-sm font-semibold text-muted-foreground">
                 Wartet auf deine Freigabe ({pending.length})
               </h2>
-              <div className="flex flex-col gap-4">{pending.map(renderCard)}</div>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {pending.map(renderCard)}
+              </div>
             </div>
           )}
           {others.length > 0 && (
@@ -89,7 +91,9 @@ export default async function ReviewPostsPage({
               {pending.length > 0 && (
                 <h2 className="text-sm font-semibold text-muted-foreground">Weitere Beiträge</h2>
               )}
-              <div className="flex flex-col gap-4">{others.map(renderCard)}</div>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {others.map(renderCard)}
+              </div>
             </div>
           )}
         </>
