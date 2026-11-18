@@ -187,10 +187,10 @@ export async function confirmReviewMediaUploadAction(
   });
 }
 
-// Lets a client remove something they just uploaded through this same link
-// — the upload widget only ever shows items uploaded in the current browser
-// session, so this can't be used to reach into the rest of the workspace's
-// media library.
+// Lets a client (with canUpload) delete anything in the workspace's media
+// library — used by the upload widget (only their own session's items) and
+// the full "Material" library view alike. Gated the same way uploading is,
+// since deleting is really just undoing an upload.
 export async function deleteReviewMediaAction(token: string, mediaId: string) {
   const link = await requireLink(token);
   if (!link.canUpload) throw new ShareLinkError("Hochladen ist für diesen Link nicht erlaubt.");

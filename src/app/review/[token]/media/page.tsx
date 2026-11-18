@@ -1,6 +1,7 @@
 import { getShareLinkByToken } from "@/lib/share-links";
 import { listMedia } from "@/lib/media";
 import { MediaLibraryList } from "@/components/media-library-list";
+import { deleteReviewMediaAction } from "@/app/review/[token]/actions";
 
 export default async function ReviewMediaPage({
   params,
@@ -17,11 +18,12 @@ export default async function ReviewMediaPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Material</h1>
-        <p className="text-muted-foreground">
-          Alles, was du und die Agentur hochgeladen habt, mit Zeitpunkt.
-        </p>
+        <p className="text-muted-foreground">Alles, was hochgeladen wurde.</p>
       </div>
-      <MediaLibraryList media={media} />
+      <MediaLibraryList
+        media={media}
+        onDelete={link.canUpload ? deleteReviewMediaAction.bind(null, token) : undefined}
+      />
     </div>
   );
 }

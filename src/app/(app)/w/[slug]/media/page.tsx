@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listMedia } from "@/lib/media";
 import { MediaLibraryList } from "@/components/media-library-list";
+import { deleteMediaAction } from "./actions";
 
 export default async function MediaPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -17,7 +18,7 @@ export default async function MediaPage({ params }: { params: Promise<{ slug: st
           Alles, was hochgeladen wurde — vom Team und vom Kunden, mit Zeitpunkt.
         </p>
       </div>
-      <MediaLibraryList media={media} />
+      <MediaLibraryList media={media} onDelete={deleteMediaAction.bind(null, slug)} />
     </div>
   );
 }
