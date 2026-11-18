@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { MessageSquare, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, CheckCircle2, XCircle } from "lucide-react";
 import type { Platform, PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,6 +84,8 @@ export function ReviewPostCard({
   reviewerName,
   compact = false,
   approvedAt,
+  rejectedAt,
+  rejectionNote,
 }: {
   token: string;
   postId: string;
@@ -99,11 +101,14 @@ export function ReviewPostCard({
   canComment: boolean;
   reviewerName: string;
   // Compact mode skips the media preview / channel tabs for an
-  // already-decided post — used in the "Bereits freigegeben" list, where a
-  // full image card per row felt cluttered. approvedAt (post.updatedAt at
-  // the time it was approved) drives the checkmark + relative time there.
+  // already-decided post — used in the "Bereits freigegeben / abgelehnt"
+  // list, where a full image card per row felt cluttered. approvedAt
+  // (post.updatedAt at approval time) or rejectedAt (the rejection event's
+  // createdAt) drives the checkmark/cross + relative time there.
   compact?: boolean;
   approvedAt?: Date | null;
+  rejectedAt?: Date | null;
+  rejectionNote?: string | null;
 }) {
   const [currentStatus, setCurrentStatus] = useState(status);
   const [editing, setEditing] = useState(false);
@@ -175,6 +180,11 @@ export function ReviewPostCard({
                 <CheckCircle2 className="size-3.5" />
                 Freigegeben {relativeTime(approvedAt)}
               </span>
+            ) : rejectedAt ? (
+              <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                <XCircle className="size-3.5" />
+                Abgelehnt {relativeTime(rejectedAt)}
+              </span>
             ) : (
               <Badge variant={STATUS_VARIANTS[currentStatus]}>{STATUS_LABELS[currentStatus]}</Badge>
             )}
@@ -242,9 +252,16 @@ export function ReviewPostCard({
         )}
 
         {compact ? (
-          <p className="line-clamp-2 text-sm">
-            {masterText || <span className="text-muted-foreground italic">(kein Text)</span>}
-          </p>
+          <div>
+            <p className="line-clamp-2 text-sm">
+              {masterText || <span className="text-muted-foreground italic">(kein Text)</span>}
+            </p>
+            {rejectionNote && (
+              <p className="mt-1 text-xs text-amber-600">
+                {rejectionNote.replace(/^Abgelehnt:\s*/, "")}
+              </p>
+            )}
+          </div>
         ) : (
           <div className="px-5">
             <ContentPreview text={masterText} media={masterMedia} compact />

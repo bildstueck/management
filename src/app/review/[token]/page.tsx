@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronRight, CheckCircle2, XCircle } from "lucide-react";
 import type { PostStatus } from "@prisma/client";
 import { getShareLinkByToken } from "@/lib/share-links";
-import { listPostsByStatus, listReviewablePostsInRange } from "@/lib/posts";
+import { listPostsByStatus, listRejectedPosts, listReviewablePostsInRange } from "@/lib/posts";
 import { getMonthGrid } from "@/lib/calendar-dates";
 import { Badge } from "@/components/ui/badge";
 import { ReviewUpload } from "@/components/review/review-upload";
@@ -41,44 +41,54 @@ function PostList({
   token: string;
   posts: ListedPost[];
   emptyLabel: string;
-  variant: "pending" | "approved";
+  variant: "pending" | "decided";
 }) {
   if (posts.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
   return (
     <div className="flex flex-col gap-2">
-      {posts.map((post) => (
-        <Link
-          key={post.id}
-          href={`/review/${token}/posts#post-${post.id}`}
-          className="flex items-center gap-3 rounded-lg border px-4 py-3 text-sm hover:border-primary"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 font-medium">
-              {post.masterText || <span className="text-muted-foreground">(kein Text)</span>}
-            </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              {variant === "approved" ? (
-                <span className="flex items-center gap-1 text-xs text-primary">
-                  <CheckCircle2 className="size-3.5" />
-                  Freigegeben {relativeTime(post.updatedAt)}
-                </span>
-              ) : (
-                <Badge variant="secondary" className="text-xs">
-                  {STATUS_LABELS[post.status]}
-                </Badge>
-              )}
-              {post.scheduledAt && (
-                <span className="text-xs text-muted-foreground">
-                  {dateFormatter.format(post.scheduledAt)}
-                </span>
-              )}
+      {posts.map((post) => {
+        const isRejected = post.status === "DRAFT";
+        return (
+          <Link
+            key={post.id}
+            href={`/review/${token}/posts#post-${post.id}`}
+            className="flex items-center gap-3 rounded-lg border px-4 py-3 text-sm hover:border-primary"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 font-medium">
+                {post.masterText || <span className="text-muted-foreground">(kein Text)</span>}
+              </p>
+              <div className="mt-1.5 flex items-center gap-2">
+                {variant === "decided" ? (
+                  isRejected ? (
+                    <span className="flex items-center gap-1 text-xs text-amber-600">
+                      <XCircle className="size-3.5" />
+                      Abgelehnt {relativeTime(post.updatedAt)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <CheckCircle2 className="size-3.5" />
+                      Freigegeben {relativeTime(post.updatedAt)}
+                    </span>
+                  )
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    {STATUS_LABELS[post.status]}
+                  </Badge>
+                )}
+                {post.scheduledAt && (
+                  <span className="text-xs text-muted-foreground">
+                    {dateFormatter.format(post.scheduledAt)}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Link>
-      ))}
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -103,11 +113,15 @@ export default async function ReviewOverviewPage({
   const monthIndex = (Number(monthStr) || now.getMonth() + 1) - 1;
   const grid = getMonthGrid(year, monthIndex);
 
-  const [pending, approved, calendarPosts] = await Promise.all([
+  const [pending, approved, rejected, calendarPosts] = await Promise.all([
     listPostsByStatus(link.workspaceId, ["PENDING_APPROVAL"]),
     listPostsByStatus(link.workspaceId, ["APPROVED", "SCHEDULED", "PUBLISHED"]),
+    listRejectedPosts(link.workspaceId),
     listReviewablePostsInRange(link.workspaceId, grid.gridStart, grid.gridEnd),
   ]);
+  const decided = [...approved, ...rejected].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
 
   const greeting = link.recipientName ? `Hallo ${link.recipientName}` : "Hallo!";
 
@@ -140,14 +154,14 @@ export default async function ReviewOverviewPage({
         </div>
         <div className="flex flex-col gap-3 rounded-xl border bg-background p-4">
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            Bereits freigegeben
-            <Badge variant="secondary">{approved.length}</Badge>
+            Bereits freigegeben/abgelehnt
+            <Badge variant="secondary">{decided.length}</Badge>
           </h2>
           <PostList
             token={token}
-            posts={approved}
-            emptyLabel="Noch nichts freigegeben."
-            variant="approved"
+            posts={decided}
+            emptyLabel="Noch nichts entschieden."
+            variant="decided"
           />
         </div>
       </div>

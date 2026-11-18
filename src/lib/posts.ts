@@ -46,6 +46,27 @@ export function listReviewablePosts(workspaceId: string) {
   });
 }
 
+// Posts the client previously rejected and that are still sitting in DRAFT
+// un-resubmitted — i.e. the post's own status is DRAFT and the most recent
+// ApprovalEvent on it is a client rejection (actorUserId null, toStatus
+// DRAFT). Once the team resubmits it, it leaves this list and shows up in
+// listReviewablePosts (PENDING_APPROVAL) instead.
+export async function listRejectedPosts(workspaceId: string) {
+  const drafts = await prisma.post.findMany({
+    where: { workspaceId, status: "DRAFT" },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      channelVariants: { include: { socialAccount: true } },
+      ...COMMENTS_INCLUDE,
+      ...HISTORY_INCLUDE,
+    },
+  });
+  return drafts.filter((post) => {
+    const last = post.approvalEvents[post.approvalEvents.length - 1];
+    return last && last.actorUserId === null && last.toStatus === "DRAFT";
+  });
+}
+
 export function listPostsInRange(workspaceId: string, from: Date, to: Date) {
   return prisma.post.findMany({
     where: { workspaceId, scheduledAt: { gte: from, lt: to } },

@@ -1,6 +1,6 @@
 import { getShareLinkByToken } from "@/lib/share-links";
 import { getReviewerName } from "@/lib/share-link-session";
-import { listReviewablePosts } from "@/lib/posts";
+import { listReviewablePosts, listRejectedPosts } from "@/lib/posts";
 import { listMedia } from "@/lib/media";
 import { ReviewPostCard } from "@/components/review/review-post-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,17 +14,22 @@ export default async function ReviewPostsPage({
   const link = await getShareLinkByToken(token);
   if (!link) return null; // handled by the layout
 
-  const [posts, media, reviewerName] = await Promise.all([
+  const [reviewable, rejected, media, reviewerName] = await Promise.all([
     listReviewablePosts(link.workspaceId),
+    listRejectedPosts(link.workspaceId),
     listMedia(link.workspaceId),
     getReviewerName(),
   ]);
   const mediaById = new Map(media.map((m) => [m.id, m]));
-  const pending = posts.filter((p) => p.status === "PENDING_APPROVAL");
-  const others = posts.filter((p) => p.status !== "PENDING_APPROVAL");
+  const pending = reviewable.filter((p) => p.status === "PENDING_APPROVAL");
+  const decided = [...reviewable.filter((p) => p.status !== "PENDING_APPROVAL"), ...rejected].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
   const { canApprove, canEdit, canComment } = link;
 
-  function renderCard(post: (typeof posts)[number], compact = false) {
+  function renderCard(post: (typeof pending)[number] | (typeof decided)[number], compact = false) {
+    const isRejected = post.status === "DRAFT";
+    const lastEvent = post.approvalEvents[post.approvalEvents.length - 1];
     return (
       <ReviewPostCard
         key={post.id}
@@ -44,7 +49,9 @@ export default async function ReviewPostsPage({
         comments={post.comments}
         history={post.approvalEvents}
         compact={compact}
-        approvedAt={compact ? post.updatedAt : undefined}
+        approvedAt={compact && !isRejected ? post.updatedAt : undefined}
+        rejectedAt={compact && isRejected ? (lastEvent?.createdAt ?? post.updatedAt) : undefined}
+        rejectionNote={compact && isRejected ? lastEvent?.note : undefined}
         channels={post.channelVariants.map((variant) => {
           const mediaIds = variant.mediaIds.length > 0 ? variant.mediaIds : post.masterMediaIds;
           return {
@@ -70,7 +77,7 @@ export default async function ReviewPostsPage({
         <p className="text-muted-foreground">Alle Beiträge, die zur Freigabe standen oder stehen.</p>
       </div>
 
-      {posts.length === 0 ? (
+      {pending.length === 0 && decided.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Noch keine Beiträge zur Freigabe</CardTitle>
@@ -88,13 +95,13 @@ export default async function ReviewPostsPage({
               </div>
             </div>
           )}
-          {others.length > 0 && (
+          {decided.length > 0 && (
             <div className="flex flex-col gap-3">
               <h2 className="text-sm font-semibold text-muted-foreground">
-                Bereits freigegeben ({others.length})
+                Bereits freigegeben/abgelehnt ({decided.length})
               </h2>
               <div className="flex max-w-xl flex-col gap-3">
-                {others.map((post) => renderCard(post, true))}
+                {decided.map((post) => renderCard(post, true))}
               </div>
             </div>
           )}
