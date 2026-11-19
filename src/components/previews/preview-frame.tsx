@@ -25,7 +25,7 @@ export function MediaGrid({ media }: { media: { id: string; type: "IMAGE" | "VID
           <video src={item.url} className="max-h-96 w-full object-cover" controls />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.url} alt="" className="max-h-96 w-full object-cover" />
+          <img src={item.url} alt="" loading="lazy" decoding="async" className="max-h-96 w-full object-cover" />
         )}
       </div>
     );
@@ -38,7 +38,7 @@ export function MediaGrid({ media }: { media: { id: string; type: "IMAGE" | "VID
             <video src={item.url} className="h-full w-full object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.url} alt="" className="h-full w-full object-cover" />
+            <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           )}
         </div>
       ))}

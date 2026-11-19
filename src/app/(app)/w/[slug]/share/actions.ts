@@ -37,10 +37,7 @@ export async function createShareLinkAction(
   return undefined;
 }
 
-export async function deleteShareLinkAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const id = formData.get("id") as string;
-
+export async function deleteShareLinkAction(slug: string, id: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
   await deleteShareLink(workspace.id, id);

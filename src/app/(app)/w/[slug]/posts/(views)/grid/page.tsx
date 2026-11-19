@@ -77,7 +77,7 @@ export default async function InstagramGridPage({
                   </div>
                 ) : first ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={first.url} alt="" className="h-full w-full object-cover" />
+                  <img src={first.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                     Kein Medium

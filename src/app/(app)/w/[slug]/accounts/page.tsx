@@ -2,10 +2,8 @@ import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember } from "@/lib/workspaces";
 import { listSocialAccounts } from "@/lib/social-accounts";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { disconnectAccountAction } from "./actions";
+import { Card, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
+import { AccountCard } from "@/components/account-card";
 
 const PLATFORM_LABELS: Record<string, string> = {
   FACEBOOK: "Facebook",
@@ -93,35 +91,16 @@ export default async function AccountsPage({
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => {
-            const status = tokenStatus(account.tokenExpiresAt);
-            return (
-              <Card key={account.id}>
-                <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-                  <Avatar>
-                    <AvatarImage src={account.avatarUrl ?? undefined} />
-                    <AvatarFallback>{account.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-base">{account.displayName}</CardTitle>
-                    <CardDescription>{PLATFORM_LABELS[account.platform]}</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
-                  <Badge variant={status.variant}>{status.label}</Badge>
-                  {canManage && (
-                    <form action={disconnectAccountAction}>
-                      <input type="hidden" name="slug" value={slug} />
-                      <input type="hidden" name="accountId" value={account.id} />
-                      <Button type="submit" variant="ghost" size="sm">
-                        Trennen
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              slug={slug}
+              account={account}
+              platformLabel={PLATFORM_LABELS[account.platform]}
+              status={tokenStatus(account.tokenExpiresAt)}
+              canManage={canManage}
+            />
+          ))}
         </div>
       )}
     </div>

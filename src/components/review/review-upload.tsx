@@ -102,7 +102,7 @@ export function ReviewUpload({ token }: { token: string }) {
             >
               {item.type === "IMAGE" ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.url} alt="" className="h-full w-full object-cover" />
+                <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                   Video

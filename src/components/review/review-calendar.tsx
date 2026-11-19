@@ -109,9 +109,9 @@ export function ReviewCalendar({
             );
 
             return dayPosts.length > 0 ? (
-              <a key={dateKey} href={`/review/${token}/posts#post-${dayPosts[0].id}`}>
+              <Link key={dateKey} href={`/review/${token}/posts#post-${dayPosts[0].id}`}>
                 {cell}
-              </a>
+              </Link>
             ) : (
               <div key={dateKey}>{cell}</div>
             );

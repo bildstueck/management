@@ -39,7 +39,7 @@ export function MediaPickerGrid({
               </div>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.url} alt="" className="h-full w-full object-cover" />
+              <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             )}
             {selected && (
               <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">

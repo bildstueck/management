@@ -5,10 +5,7 @@ import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { disconnectSocialAccount } from "@/lib/social-accounts";
 
-export async function disconnectAccountAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const accountId = formData.get("accountId") as string;
-
+export async function disconnectAccountAction(slug: string, accountId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
 

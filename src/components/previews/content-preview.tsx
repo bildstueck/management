@@ -17,7 +17,7 @@ function MediaCell({
         <video src={item.url} className="h-full w-full object-cover" muted />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.url} alt="" className="h-full w-full object-cover" />
+        <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
       )}
       {overlay ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white">

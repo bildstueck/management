@@ -24,7 +24,7 @@ export function InstagramPreview({ accountName, avatarUrl, text, media, mode }: 
             <video src={main.url} className="h-full w-full object-cover" controls />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={main.url} alt="" className="h-full w-full object-cover" />
+            <img src={main.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ))}
       </div>
       <div className="flex items-center justify-between px-3 py-2">

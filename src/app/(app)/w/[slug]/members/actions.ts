@@ -30,10 +30,7 @@ export async function addMemberAction(
   revalidatePath(`/w/${slug}/members`);
 }
 
-export async function removeMemberAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const membershipId = formData.get("membershipId") as string;
-
+export async function removeMemberAction(slug: string, membershipId: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
 
@@ -41,11 +38,11 @@ export async function removeMemberAction(formData: FormData) {
   revalidatePath(`/w/${slug}/members`);
 }
 
-export async function updateMemberRoleAction(formData: FormData) {
-  const slug = formData.get("slug") as string;
-  const membershipId = formData.get("membershipId") as string;
-  const role = formData.get("role") as MembershipRole;
-
+export async function updateMemberRoleAction(
+  slug: string,
+  membershipId: string,
+  role: MembershipRole,
+) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
 

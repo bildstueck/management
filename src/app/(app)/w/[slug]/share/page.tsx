@@ -1,19 +1,9 @@
-import { X } from "lucide-react";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
 import { listShareLinks } from "@/lib/share-links";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CreateShareLinkForm } from "@/components/create-share-link-form";
-import { CopyButton } from "@/components/copy-button";
-import { deleteShareLinkAction } from "./actions";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
+import { ShareLinkCard } from "@/components/share-link-card";
 
 export default async function SharePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -39,47 +29,13 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
 
       <div className="flex flex-col gap-3 max-w-2xl">
         {links.length === 0 && <p className="text-muted-foreground">Noch keine Links erstellt.</p>}
-        {links.map((link) => {
-          const url = `${process.env.AUTH_URL ?? ""}/review/${link.token}`;
-          return (
-            <Card key={link.id}>
-              <CardContent className="flex items-center justify-between gap-4 py-4">
-                <div>
-                  {link.recipientName && (
-                    <p className="text-sm font-semibold">{link.recipientName}</p>
-                  )}
-                  <p className="font-mono text-sm text-muted-foreground">{url}</p>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    {link.passwordHash && <Badge variant="secondary">Passwortgeschützt</Badge>}
-                    {link.expiresAt && (
-                      <Badge variant="secondary">Läuft ab: {dateFormatter.format(link.expiresAt)}</Badge>
-                    )}
-                    {link.canComment && <Badge variant="secondary">Kommentare</Badge>}
-                    {link.canApprove && <Badge variant="secondary">Freigabe</Badge>}
-                    {link.canEdit && <Badge variant="secondary">Bearbeiten</Badge>}
-                    {link.canUpload && <Badge variant="secondary">Medien-Upload</Badge>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CopyButton value={url} />
-                  <form action={deleteShareLinkAction}>
-                    <input type="hidden" name="slug" value={slug} />
-                    <input type="hidden" name="id" value={link.id} />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Link löschen"
-                      title="Link löschen"
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </form>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {links.map((link) => (
+          <ShareLinkCard
+            key={link.id}
+            slug={slug}
+            link={{ ...link, url: `${process.env.AUTH_URL ?? ""}/review/${link.token}` }}
+          />
+        ))}
       </div>
     </div>
   );
