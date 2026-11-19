@@ -5,6 +5,7 @@ import {
   listPostsByStatus,
   listRecentClientActivity,
   listPostsInRange,
+  sortBySoonest,
 } from "@/lib/posts";
 import { getMonthGrid } from "@/lib/calendar-dates";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,12 +74,14 @@ export default async function WorkspaceOverviewPage({
   const monthIndex = (Number(monthStr) || now.getMonth() + 1) - 1;
   const grid = getMonthGrid(year, monthIndex);
 
-  const [pending, approved, scheduled, activity] = await Promise.all([
+  const [pendingRaw, approvedRaw, scheduled, activity] = await Promise.all([
     listPostsByStatus(workspace.id, ["PENDING_APPROVAL"]),
     listPostsByStatus(workspace.id, ["APPROVED"]),
     listPostsInRange(workspace.id, grid.gridStart, grid.gridEnd),
     listRecentClientActivity(workspace.id),
   ]);
+  const pending = sortBySoonest(pendingRaw);
+  const approved = sortBySoonest(approvedRaw);
 
   return (
     <div className="flex flex-col gap-6">

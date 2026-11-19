@@ -67,6 +67,18 @@ export async function listRejectedPosts(workspaceId: string) {
   });
 }
 
+// Pending-approval posts read better sorted by urgency (soonest scheduled
+// date first) than by last-updated — a client should see what's due first,
+// not just what the team touched most recently. Posts without a
+// scheduledAt yet sort to the end.
+export function sortBySoonest<T extends { scheduledAt: Date | null }>(posts: T[]): T[] {
+  return [...posts].sort((a, b) => {
+    const aTime = a.scheduledAt?.getTime() ?? Infinity;
+    const bTime = b.scheduledAt?.getTime() ?? Infinity;
+    return aTime - bTime;
+  });
+}
+
 export function listPostsInRange(workspaceId: string, from: Date, to: Date) {
   return prisma.post.findMany({
     where: { workspaceId, scheduledAt: { gte: from, lt: to } },

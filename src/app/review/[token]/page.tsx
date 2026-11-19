@@ -2,7 +2,12 @@ import Link from "next/link";
 import { ChevronRight, CheckCircle2, XCircle } from "lucide-react";
 import type { PostStatus } from "@prisma/client";
 import { getShareLinkByToken } from "@/lib/share-links";
-import { listPostsByStatus, listRejectedPosts, listReviewablePostsInRange } from "@/lib/posts";
+import {
+  listPostsByStatus,
+  listRejectedPosts,
+  listReviewablePostsInRange,
+  sortBySoonest,
+} from "@/lib/posts";
 import { getMonthGrid } from "@/lib/calendar-dates";
 import { Badge } from "@/components/ui/badge";
 import { ReviewUpload } from "@/components/review/review-upload";
@@ -113,12 +118,13 @@ export default async function ReviewOverviewPage({
   const monthIndex = (Number(monthStr) || now.getMonth() + 1) - 1;
   const grid = getMonthGrid(year, monthIndex);
 
-  const [pending, approved, rejected, calendarPosts] = await Promise.all([
+  const [pendingRaw, approved, rejected, calendarPosts] = await Promise.all([
     listPostsByStatus(link.workspaceId, ["PENDING_APPROVAL"]),
     listPostsByStatus(link.workspaceId, ["APPROVED", "SCHEDULED", "PUBLISHED"]),
     listRejectedPosts(link.workspaceId),
     listReviewablePostsInRange(link.workspaceId, grid.gridStart, grid.gridEnd),
   ]);
+  const pending = sortBySoonest(pendingRaw);
   const decided = [...approved, ...rejected].sort(
     (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
   );

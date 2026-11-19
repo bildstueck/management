@@ -1,6 +1,6 @@
 import { getShareLinkByToken } from "@/lib/share-links";
 import { getReviewerName } from "@/lib/share-link-session";
-import { listReviewablePosts, listRejectedPosts } from "@/lib/posts";
+import { listReviewablePosts, listRejectedPosts, sortBySoonest } from "@/lib/posts";
 import { listMedia } from "@/lib/media";
 import { ReviewPostCard } from "@/components/review/review-post-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export default async function ReviewPostsPage({
     getReviewerName(),
   ]);
   const mediaById = new Map(media.map((m) => [m.id, m]));
-  const pending = reviewable.filter((p) => p.status === "PENDING_APPROVAL");
+  const pending = sortBySoonest(reviewable.filter((p) => p.status === "PENDING_APPROVAL"));
   const decided = [...reviewable.filter((p) => p.status !== "PENDING_APPROVAL"), ...rejected].sort(
     (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
   );
