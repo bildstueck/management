@@ -4,10 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import type { MembershipRole } from "@prisma/client";
 
-export function getWorkspacesForUser(userId: string) {
-  return prisma.workspace.findMany({
+// Includes each workspace's lastViewedAt for this user (via their own
+// membership row), so the dashboard can tell which ones have activity the
+// user hasn't opened the workspace to see yet.
+export async function getWorkspacesForUser(userId: string) {
+  const workspaces = await prisma.workspace.findMany({
     where: { memberships: { some: { userId } } },
     orderBy: { createdAt: "asc" },
+    include: { memberships: { where: { userId }, select: { lastViewedAt: true } } },
+  });
+  return workspaces.map(({ memberships, ...workspace }) => ({
+    ...workspace,
+    lastViewedAt: memberships[0]?.lastViewedAt ?? null,
+  }));
+}
+
+export async function touchMembershipViewed(slug: string, userId: string) {
+  await prisma.membership.updateMany({
+    where: { userId, workspace: { slug } },
+    data: { lastViewedAt: new Date() },
   });
 }
 

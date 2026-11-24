@@ -22,10 +22,10 @@ export function MediaGrid({ media }: { media: { id: string; type: "IMAGE" | "VID
     return (
       <div className="bg-black/5">
         {item.type === "VIDEO" ? (
-          <video src={item.url} className="max-h-96 w-full object-cover" controls />
+          <video src={item.url} className="max-h-96 w-full object-contain" controls />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.url} alt="" loading="lazy" decoding="async" className="max-h-96 w-full object-cover" />
+          <img src={item.url} alt="" loading="lazy" decoding="async" className="max-h-96 w-full object-contain" />
         )}
       </div>
     );

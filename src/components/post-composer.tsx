@@ -15,7 +15,6 @@ import { PLATFORM_META } from "@/components/platform-meta";
 import { FacebookPreview } from "@/components/previews/facebook-preview";
 import { InstagramPreview } from "@/components/previews/instagram-preview";
 import { LinkedInPreview } from "@/components/previews/linkedin-preview";
-import { ContentPreview } from "@/components/previews/content-preview";
 import {
   requestMediaUploadAction,
   confirmMediaUploadAction,
@@ -58,12 +57,14 @@ function readImageDimensions(file: File): Promise<{ width?: number; height?: num
 
 export function PostComposer({
   slug,
+  workspaceName,
   accounts,
   initialMedia,
   initialPost,
   initialDate,
 }: {
   slug: string;
+  workspaceName: string;
   accounts: AccountOption[];
   initialMedia: MediaOption[];
   initialPost: InitialPost | null;
@@ -382,30 +383,34 @@ export function PostComposer({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">Vorschau</h2>
-          {selectedAccounts.length > 0 && (
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                variant={previewMode === "mobile" ? "default" : "outline"}
-                onClick={() => setPreviewMode("mobile")}
-              >
-                Mobile
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={previewMode === "desktop" ? "default" : "outline"}
-                onClick={() => setPreviewMode("desktop")}
-              >
-                Desktop
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={previewMode === "mobile" ? "default" : "outline"}
+              onClick={() => setPreviewMode("mobile")}
+            >
+              Mobile
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={previewMode === "desktop" ? "default" : "outline"}
+              onClick={() => setPreviewMode("desktop")}
+            >
+              Desktop
+            </Button>
+          </div>
         </div>
 
         {selectedAccounts.length === 0 ? (
-          <ContentPreview text={masterText} media={resolveMedia(masterMediaIds)} />
+          <InstagramPreview
+            accountName={workspaceName}
+            avatarUrl={null}
+            text={masterText}
+            media={resolveMedia(masterMediaIds)}
+            mode={previewMode}
+          />
         ) : (
           <Tabs
             value={activePreviewId ?? selectedAccounts[0].id}

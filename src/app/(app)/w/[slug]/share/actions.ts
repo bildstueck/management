@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal";
 import { requireWorkspaceRole } from "@/lib/workspaces";
-import { createShareLink, deleteShareLink } from "@/lib/share-links";
+import { createShareLink, deleteShareLink, updateShareLink, type UpdateShareLinkInput } from "@/lib/share-links";
 
 export type CreateShareLinkState = { error?: string } | undefined;
 
@@ -41,5 +41,12 @@ export async function deleteShareLinkAction(slug: string, id: string) {
   const user = await requireUser();
   const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
   await deleteShareLink(workspace.id, id);
+  revalidatePath(`/w/${slug}/share`);
+}
+
+export async function updateShareLinkAction(slug: string, id: string, input: UpdateShareLinkInput) {
+  const user = await requireUser();
+  const workspace = await requireWorkspaceRole(slug, user.id, ["OWNER"]);
+  await updateShareLink(workspace.id, id, input);
   revalidatePath(`/w/${slug}/share`);
 }

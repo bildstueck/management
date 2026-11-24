@@ -28,13 +28,14 @@ enum MembershipRole {
 }
 
 model Membership {
-  id          String         @id @default(cuid())
-  role        MembershipRole @default(EDITOR)
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId String
-  createdAt   DateTime       @default(now())
+  id           String         @id @default(cuid())
+  role         MembershipRole @default(EDITOR)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId  String
+  createdAt    DateTime       @default(now())
+  lastViewedAt DateTime? // bumped when this member actually opens the workspace (not on link prefetch) — drives the "new client activity" dot on the dashboard
 
   @@unique([userId, workspaceId])
 }
@@ -151,18 +152,20 @@ model Media {
 // ---------- Collaboration / Approval ----------
 
 model ShareLink {
-  id            String    @id @default(cuid())
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId   String
-  token         String    @unique
-  recipientName String? // set by the agency when creating the link, shown on the review page header
-  passwordHash  String?
-  expiresAt     DateTime?
-  canComment    Boolean   @default(true)
-  canApprove    Boolean   @default(true)
-  canEdit       Boolean   @default(false)
-  canUpload     Boolean   @default(true) // let the client submit their own photos/videos for the team to use
-  createdAt     DateTime  @default(now())
+  id             String    @id @default(cuid())
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId    String
+  token          String    @unique
+  recipientName  String? // set by the agency when creating the link, shown on the review page header
+  passwordHash   String?
+  expiresAt      DateTime?
+  canComment     Boolean   @default(true)
+  canApprove     Boolean   @default(true)
+  canEdit        Boolean   @default(false)
+  canUpload      Boolean   @default(true) // let the client submit their own photos/videos for the team to use
+  createdAt      DateTime  @default(now())
+  failedAttempts Int       @default(0) // wrong-password guesses since the last lockout or success
+  lockedUntil    DateTime? // set after too many failed attempts; blocks further tries until this passes
 }
 
 enum CommentAuthorType {

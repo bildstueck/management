@@ -142,6 +142,29 @@ export function listRecentClientActivity(workspaceId: string, limit = 8) {
   });
 }
 
+// Timestamp of the most recent client-originated activity (an approval
+// decision via the review link, or an external comment) in a workspace —
+// compared against Membership.lastViewedAt to drive the "new activity" dot
+// on the admin dashboard. Returns null if the client has never done
+// anything yet.
+export async function getLatestClientActivityAt(workspaceId: string): Promise<Date | null> {
+  const [lastEvent, lastComment] = await Promise.all([
+    prisma.approvalEvent.findFirst({
+      where: { post: { workspaceId }, actorUserId: null },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    prisma.comment.findFirst({
+      where: { post: { workspaceId }, authorType: "EXTERNAL" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+  ]);
+  const dates = [lastEvent?.createdAt, lastComment?.createdAt].filter((d): d is Date => !!d);
+  if (dates.length === 0) return null;
+  return new Date(Math.max(...dates.map((d) => d.getTime())));
+}
+
 // For the Instagram grid preview: all IG channel variants in the workspace,
 // most-recently-scheduled first. Posts without a scheduledAt have no defined
 // position yet, so they sort to the end rather than relying on the

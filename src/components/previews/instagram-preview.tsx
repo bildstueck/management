@@ -21,10 +21,10 @@ export function InstagramPreview({ accountName, avatarUrl, text, media, mode }: 
       <div className="aspect-square w-full bg-black/5">
         {main &&
           (main.type === "VIDEO" ? (
-            <video src={main.url} className="h-full w-full object-cover" controls />
+            <video src={main.url} className="h-full w-full object-contain" controls />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={main.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <img src={main.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
           ))}
       </div>
       <div className="flex items-center justify-between px-3 py-2">

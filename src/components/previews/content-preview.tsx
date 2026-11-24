@@ -4,20 +4,32 @@ function MediaCell({
   item,
   overlay,
   compact,
+  fit = "cover",
 }: {
   item: PreviewMedia;
   overlay?: number;
   compact?: boolean;
+  // "contain" shows the whole image letterboxed instead of cropping it —
+  // used for the single-image case, where cropping was hiding real content
+  // (e.g. a logo graphic along one edge of the photo).
+  fit?: "cover" | "contain";
 }) {
+  const fitClass = fit === "contain" ? "object-contain" : "object-cover";
   return (
     <div
       className={`relative overflow-hidden bg-black/5 ${compact ? "h-48" : "aspect-square"}`}
     >
       {item.type === "VIDEO" ? (
-        <video src={item.url} className="h-full w-full object-cover" muted />
+        <video src={item.url} className={`h-full w-full ${fitClass}`} muted />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+        <img
+          src={item.url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className={`h-full w-full ${fitClass}`}
+        />
       )}
       {overlay ? (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white">
@@ -48,7 +60,7 @@ export function ContentPreview({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-background">
-      {visible.length === 1 && <MediaCell item={visible[0]} compact={compact} />}
+      {visible.length === 1 && <MediaCell item={visible[0]} compact={compact} fit="contain" />}
       {visible.length > 1 && (
         <div className="grid grid-cols-2 gap-px bg-border">
           {visible.map((item, i) => (

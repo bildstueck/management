@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/dal";
 import { getWorkspacesForUser } from "@/lib/workspaces";
+import { getLatestClientActivityAt } from "@/lib/posts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 
 export default async function DashboardPage() {
   const user = await requireUser();
   const workspaces = await getWorkspacesForUser(user.id);
+  const activityFlags = await Promise.all(
+    workspaces.map(async (workspace) => {
+      const latest = await getLatestClientActivityAt(workspace.id);
+      return (
+        !!latest && (!workspace.lastViewedAt || latest.getTime() > workspace.lastViewedAt.getTime())
+      );
+    }),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,7 +38,7 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {workspaces.map((workspace) => (
+          {workspaces.map((workspace, i) => (
             <Link key={workspace.id} href={`/w/${workspace.slug}`}>
               <Card className="transition-colors hover:border-primary">
                 <CardHeader>
@@ -38,7 +47,13 @@ export default async function DashboardPage() {
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: workspace.color }}
                     />
-                    {workspace.name}
+                    <span className="flex-1">{workspace.name}</span>
+                    {activityFlags[i] && (
+                      <span
+                        className="size-2 shrink-0 rounded-full bg-primary"
+                        title="Neue Rückmeldung vom Kunden"
+                      />
+                    )}
                   </CardTitle>
                 </CardHeader>
               </Card>

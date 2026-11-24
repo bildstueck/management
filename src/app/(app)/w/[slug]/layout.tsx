@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/dal";
 import { requireWorkspaceMember, getWorkspacesForUser } from "@/lib/workspaces";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { WorkspaceNav } from "@/components/workspace-nav";
+import { MarkWorkspaceViewed } from "@/components/mark-workspace-viewed";
 
 export default async function WorkspaceLayout({
   children,
@@ -19,6 +20,7 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex flex-1 flex-col -m-6 lg:flex-row">
+      <MarkWorkspaceViewed slug={slug} />
       <div className="flex flex-col gap-2 border-b p-3 lg:hidden">
         <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
         <WorkspaceNav slug={slug} isOwner={workspace.role === "OWNER"} variant="mobile" />

@@ -25,6 +25,7 @@ export default async function EditPostPage({
       <h1 className="text-2xl font-semibold">Beitrag bearbeiten</h1>
       <PostComposer
         slug={slug}
+        workspaceName={workspace.name}
         accounts={accounts}
         initialMedia={media.map((m) => ({ id: m.id, type: m.type, url: m.url }))}
         initialPost={{

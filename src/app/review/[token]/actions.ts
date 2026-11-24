@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getShareLinkByToken, verifyShareLinkPassword } from "@/lib/share-links";
+import {
+  getShareLinkByToken,
+  verifyShareLinkPassword,
+  isShareLinkLockedOut,
+  recordFailedShareLinkAttempt,
+  clearShareLinkAttempts,
+} from "@/lib/share-links";
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
 import { approvePost, rejectPost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
@@ -40,9 +46,17 @@ export async function unlockShareLinkAction(
   formData: FormData,
 ): Promise<UnlockState> {
   const link = await requireLink(token);
+  if (isShareLinkLockedOut(link)) {
+    return { error: "Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen." };
+  }
+
   const password = (formData.get("password") as string | null) ?? "";
   const valid = await verifyShareLinkPassword(link, password);
-  if (!valid) return { error: "Falsches Passwort." };
+  if (!valid) {
+    await recordFailedShareLinkAttempt(link.id);
+    return { error: "Falsches Passwort." };
+  }
+  await clearShareLinkAttempts(link.id);
   await markShareLinkUnlocked(link.id);
   return undefined;
 }
