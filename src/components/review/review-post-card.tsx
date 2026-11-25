@@ -169,11 +169,11 @@ export function ReviewPostCard({
       className={
         compact
           ? "scroll-mt-20 gap-3 rounded-xl py-4 shadow-sm"
-          : "scroll-mt-20 gap-4 overflow-hidden rounded-2xl py-0 shadow-sm"
+          : "scroll-mt-20 gap-2.5 overflow-hidden rounded-2xl py-0 shadow-sm"
       }
     >
-      <CardContent className={compact ? "flex flex-col gap-3 px-4" : "flex flex-col gap-4 p-0"}>
-        <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "" : "px-5 pt-5"}`}>
+      <CardContent className={compact ? "flex flex-col gap-3 px-4" : "flex flex-col gap-2.5 p-0"}>
+        <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "" : "px-4 pt-4"}`}>
           <div className="flex items-center gap-2">
             {approvedAt ? (
               <span className="flex items-center gap-1 text-xs font-medium text-primary">
@@ -228,7 +228,7 @@ export function ReviewPostCard({
         </div>
 
         {canApprove && pending && rejecting && (
-          <div className={`flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 ${compact ? "" : "mx-5"}`}>
+          <div className={`flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 ${compact ? "" : "mx-4"}`}>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -263,13 +263,13 @@ export function ReviewPostCard({
             )}
           </div>
         ) : (
-          <div className="px-5">
+          <div className="px-4">
             <ContentPreview text={masterText} media={masterMedia} compact />
           </div>
         )}
 
         {!compact && channels.length > 0 && (
-          <div className="px-5">
+          <div className="px-4">
             <Button
               type="button"
               variant="ghost"
@@ -311,7 +311,7 @@ export function ReviewPostCard({
         )}
 
         {!compact && canEdit && (
-          <div className="flex flex-col gap-2 px-5">
+          <div className="flex flex-col gap-2 px-4">
             {editing ? (
               <>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Dein Name" />
@@ -337,7 +337,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        <div className={compact ? "" : "px-5 pb-5"}>
+        <div className={compact ? "" : "px-4 pb-4"}>
           <ReviewComments
             open={commentsOpen}
             token={token}

@@ -140,15 +140,6 @@ export default async function ReviewOverviewPage({
         </p>
       </div>
 
-      <ReviewCalendar
-        key={`${year}-${monthIndex}`}
-        token={token}
-        year={year}
-        monthIndex={monthIndex}
-        days={grid.days}
-        posts={calendarPosts}
-      />
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div
           className={`flex flex-col gap-3 rounded-xl border p-4 ${
@@ -180,6 +171,15 @@ export default async function ReviewOverviewPage({
           />
         </div>
       </div>
+
+      <ReviewCalendar
+        key={`${year}-${monthIndex}`}
+        token={token}
+        year={year}
+        monthIndex={monthIndex}
+        days={grid.days}
+        posts={calendarPosts}
+      />
 
       {link.canUpload && <ReviewUpload token={token} />}
     </div>

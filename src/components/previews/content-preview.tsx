@@ -17,7 +17,7 @@ function MediaCell({
   const fitClass = fit === "contain" ? "object-contain" : "object-cover";
   return (
     <div
-      className={`relative overflow-hidden bg-black/5 ${compact ? "h-48" : "aspect-square"}`}
+      className={`relative overflow-hidden bg-black/5 ${compact ? "h-36" : "aspect-square"}`}
     >
       {item.type === "VIDEO" ? (
         <video src={item.url} className={`h-full w-full ${fitClass}`} muted />
@@ -73,7 +73,7 @@ export function ContentPreview({
           ))}
         </div>
       )}
-      <div className="p-4">
+      <div className="p-3">
         {text ? (
           <p className="text-sm whitespace-pre-wrap">{text}</p>
         ) : (
