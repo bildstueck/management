@@ -9,7 +9,13 @@ import {
   clearShareLinkAttempts,
 } from "@/lib/share-links";
 import { markShareLinkUnlocked, setReviewerName } from "@/lib/share-link-session";
-import { approvePost, rejectPost, updatePostTextByReviewer, getPostLite } from "@/lib/posts";
+import {
+  approvePost,
+  rejectPost,
+  reconsiderReviewPost,
+  updatePostTextByReviewer,
+  getPostLite,
+} from "@/lib/posts";
 import { addExternalComment, setCommentResolved } from "@/lib/comments";
 import { createMedia, deleteMedia } from "@/lib/media";
 import {
@@ -124,6 +130,23 @@ export async function rejectReviewPostAction(
     { name: authorName },
     trimmedReason ? `Abgelehnt: ${trimmedReason}` : "Abgelehnt",
   );
+  revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
+  revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
+  revalidatePath(`/review/${token}`, "layout");
+  return result;
+}
+
+// Client (via share link): changed their mind about an already-decided
+// post — pulls it back into "Wartet auf deine Freigabe" for a fresh
+// decision. See reconsiderReviewPost for the safety check on DRAFT posts.
+export async function reconsiderReviewPostAction(token: string, postId: string, name: string) {
+  const link = await requireLink(token);
+  if (!link.canApprove) throw new ShareLinkError("Freigeben ist für diesen Link nicht erlaubt.");
+  await requirePostInWorkspace(link.workspaceId, postId);
+
+  const authorName = name.trim() || "Kunde";
+  await setReviewerName(authorName);
+  const result = await reconsiderReviewPost(link.workspaceId, postId, { name: authorName });
   revalidatePath(`/w/${link.workspace.slug}/posts`, "layout");
   revalidatePath(`/w/${link.workspace.slug}/posts/${postId}`);
   revalidatePath(`/review/${token}`, "layout");

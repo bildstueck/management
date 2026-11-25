@@ -21,6 +21,7 @@ import { relativeTime } from "@/lib/relative-time";
 import {
   approveReviewPostAction,
   rejectReviewPostAction,
+  reconsiderReviewPostAction,
   editReviewPostTextAction,
 } from "@/app/review/[token]/actions";
 
@@ -111,6 +112,9 @@ export function ReviewPostCard({
   rejectionNote?: string | null;
 }) {
   const [currentStatus, setCurrentStatus] = useState(status);
+  const [isCompact, setIsCompact] = useState(compact);
+  const [localApprovedAt, setLocalApprovedAt] = useState(approvedAt);
+  const [localRejectedAt, setLocalRejectedAt] = useState(rejectedAt);
   const [editing, setEditing] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [text, setText] = useState(masterText);
@@ -148,6 +152,21 @@ export function ReviewPostCard({
     });
   }
 
+  function reconsider() {
+    startTransition(async () => {
+      try {
+        await reconsiderReviewPostAction(token, postId, name);
+        setCurrentStatus("PENDING_APPROVAL");
+        setIsCompact(false);
+        setLocalApprovedAt(null);
+        setLocalRejectedAt(null);
+        toast.success("Beitrag wartet wieder auf deine Entscheidung.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Zurückziehen fehlgeschlagen.");
+      }
+    });
+  }
+
   function saveEdit() {
     startTransition(async () => {
       try {
@@ -167,23 +186,23 @@ export function ReviewPostCard({
     <Card
       id={`post-${postId}`}
       className={
-        compact
+        isCompact
           ? "scroll-mt-20 gap-3 rounded-xl py-4 shadow-sm"
           : "scroll-mt-20 gap-2.5 overflow-hidden rounded-2xl py-0 shadow-sm"
       }
     >
-      <CardContent className={compact ? "flex flex-col gap-3 px-4" : "flex flex-col gap-2.5 p-0"}>
-        <div className={`flex flex-wrap items-center justify-between gap-2 ${compact ? "" : "px-4 pt-4"}`}>
+      <CardContent className={isCompact ? "flex flex-col gap-3 px-4" : "flex flex-col gap-2.5 p-0"}>
+        <div className={`flex flex-wrap items-center justify-between gap-2 ${isCompact ? "" : "px-4 pt-4"}`}>
           <div className="flex items-center gap-2">
-            {approvedAt ? (
+            {localApprovedAt ? (
               <span className="flex items-center gap-1 text-xs font-medium text-primary">
                 <CheckCircle2 className="size-3.5" />
-                Freigegeben {relativeTime(approvedAt)}
+                Freigegeben {relativeTime(localApprovedAt)}
               </span>
-            ) : rejectedAt ? (
+            ) : localRejectedAt ? (
               <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
                 <XCircle className="size-3.5" />
-                Abgelehnt {relativeTime(rejectedAt)}
+                Abgelehnt {relativeTime(localRejectedAt)}
               </span>
             ) : (
               <Badge variant={STATUS_VARIANTS[currentStatus]}>{STATUS_LABELS[currentStatus]}</Badge>
@@ -223,12 +242,23 @@ export function ReviewPostCard({
                   </Button>
                 </>
               )}
+              {canApprove && !pending && (localApprovedAt || localRejectedAt) && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={reconsider}
+                >
+                  Nochmal entscheiden
+                </Button>
+              )}
             </div>
           )}
         </div>
 
         {canApprove && pending && rejecting && (
-          <div className={`flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 ${compact ? "" : "mx-4"}`}>
+          <div className={`flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 ${isCompact ? "" : "mx-4"}`}>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -251,7 +281,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        {compact ? (
+        {isCompact ? (
           <div>
             <p className="line-clamp-2 text-sm">
               {masterText || <span className="text-muted-foreground italic">(kein Text)</span>}
@@ -268,7 +298,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        {!compact && channels.length > 0 && (
+        {!isCompact && channels.length > 0 && (
           <div className="px-4">
             <Button
               type="button"
@@ -310,7 +340,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        {!compact && canEdit && (
+        {!isCompact && canEdit && (
           <div className="flex flex-col gap-2 px-4">
             {editing ? (
               <>
@@ -337,7 +367,7 @@ export function ReviewPostCard({
           </div>
         )}
 
-        <div className={compact ? "" : "px-4 pb-4"}>
+        <div className={isCompact ? "" : "px-4 pb-4"}>
           <ReviewComments
             open={commentsOpen}
             token={token}

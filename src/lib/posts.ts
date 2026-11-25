@@ -355,6 +355,37 @@ export function rejectPost(workspaceId: string, postId: string, actor: Actor, no
   return transitionStatus(workspaceId, postId, ["PENDING_APPROVAL"], "DRAFT", actor, note);
 }
 
+// Client (via share link): undo an approval or rejection and put the post
+// back up for a fresh decision — clients can change their mind at any time,
+// not just within some window. For an APPROVED post this is a plain status
+// transition; for a DRAFT one, it must specifically be a post THEY rejected
+// (checked via the same "last ApprovalEvent was a client rejection" signal
+// listRejectedPosts uses), never an unrelated internal draft the team
+// hasn't submitted yet — a client can't use this to pull in a random draft.
+export async function reconsiderReviewPost(workspaceId: string, postId: string, actor: Actor) {
+  const post = await prisma.post.findFirst({
+    where: { id: postId, workspaceId },
+    include: { approvalEvents: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
+  if (!post) notFound();
+
+  if (post.status === "DRAFT") {
+    const last = post.approvalEvents[0];
+    if (!last || last.actorUserId !== null || last.toStatus !== "DRAFT") {
+      throw new PostActionError("Dieser Beitrag kann hier nicht erneut zur Entscheidung gestellt werden.");
+    }
+  }
+
+  return transitionStatus(
+    workspaceId,
+    postId,
+    ["APPROVED", "DRAFT"],
+    "PENDING_APPROVAL",
+    actor,
+    "Entscheidung zurückgezogen — erneut zur Freigabe gestellt.",
+  );
+}
+
 // Internal team: queue an approved (or previously failed) post for
 // publishing — immediately, or at its scheduledAt. The worker is what
 // actually waits, via a delayed BullMQ job; this just flips status + logs
